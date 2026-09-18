@@ -180,6 +180,11 @@ body{margin:0;font-family:var(--agartha-body-font);color:var(--agartha-text);bac
 .modal-overlay.show .modal-content {
   transform: scale(1) translateY(0);
 }
+.modal-content img {
+  width: 90px; height: 90px; object-fit: contain;
+  margin: 0 auto 1.25rem; display: block;
+  filter: drop-shadow(0 0 15px color-mix(in srgb, var(--agartha-gold) 50%, transparent));
+}
 .modal-content h2 {
   font-family: var(--agartha-heading-font); color: var(--agartha-gold);
   margin: 0 0 1rem; font-size: 2.2rem;
@@ -251,7 +256,7 @@ body{margin:0;font-family:var(--agartha-body-font);color:var(--agartha-text);bac
   <main class="game-main">
     <div class="intro">
       <h2>Şansını Deneyin</h2>
-      <p>3 Ücretsiz Bira logosu ile ücretsiz bira, 3 Free Spin ile +1 ekstra hak veya 3 aynı ürün logosu ile %30 İndirim kazanın!</p>
+      <p>3 Ücretsiz Bira logosu ile ücretsiz bira, 3 Free Spin ile +1 ekstra hak veya 3 Hesap logosu ile %30 İndirim kazanın!</p>
       <div class="spins-info">
         <span class="spins-left" id="spinsLeft">10 Hak Kaldı</span>
         <span class="reset-timer" id="resetTimer">Sıfırlanmaya kalan süre: --:--</span>
@@ -277,6 +282,7 @@ body{margin:0;font-family:var(--agartha-body-font);color:var(--agartha-text);bac
     <!-- WIN POP-UP (MODAL) -->
     <div class="modal-overlay" id="winModal">
       <div class="modal-content">
+        <img id="modalIcon" src="" alt="">
         <h2 id="modalTitle">Tebrikler!</h2>
         <p id="modalMessage">Kazanılan ödül detayı...</p>
         <button class="modal-btn" id="modalClose">Harika!</button>
@@ -296,7 +302,7 @@ body{margin:0;font-family:var(--agartha-body-font);color:var(--agartha-text);bac
         <select id="devForceResult">
           <option value="auto">Otomatik Oransal (1/600 Bira, 1/300 İndirim, 1/200 Free Spin)</option>
           <option value="beer">Zorla: Ücretsiz Bira (1/600)</option>
-          <option value="discount">Zorla: %30 İndirim (1/300)</option>
+          <option value="discount">Zorla: %30 İndirim (Hesap - 1/300)</option>
           <option value="free-spin">Zorla: Free Spin (1/200)</option>
           <option value="lose">Zorla: Kaybet (Kazanma Olmasın)</option>
         </select>
@@ -327,6 +333,7 @@ const devResetSpinsBtn = document.getElementById("devResetSpinsBtn");
 const devClearStorageBtn = document.getElementById("devClearStorageBtn");
 
 const winModal = document.getElementById("winModal");
+const modalIcon = document.getElementById("modalIcon");
 const modalTitle = document.getElementById("modalTitle");
 const modalMessage = document.getElementById("modalMessage");
 const modalClose = document.getElementById("modalClose");
@@ -347,14 +354,14 @@ const REWARDS = {
   discount: "Tüm İçecek/Yiyeceklerde %30 İndirim Kazandınız!"
 };
 
-/* ---------- IMAGE PRELOAD (Geç yüklenme engelleyici) ---------- */
+/* ---------- IMAGE PRELOAD ---------- */
 function preloadImages() {
   Object.keys(LABEL).forEach(id => {
     const img = new Image();
     img.src = ICON(id);
   });
 }
-preloadImages(); // Script başlar başlamaz tüm ikonları tarayıcı önbelleğine zorla yükler.
+preloadImages();
 
 const STOP_AT = [800, 1200, 2000];
 const JACKPOT_EXTRA = 3000;
@@ -463,10 +470,7 @@ function getCalculatedOutcome(){
   if(forced !== "auto"){
     if(forced === "beer") return "beer";
     if(forced === "free-spin") return "free-spin";
-    if(forced === "discount"){
-      const discounts = ["logo", "bill", "shot", "cocktail", "pizza", "vodka-energy", "gin-tonic"];
-      return discounts[Math.floor(Math.random() * discounts.length)];
-    }
+    if(forced === "discount") return "bill"; // Artık İndirim daima HESAP (Bill) ikonunu getirecek
     if(forced === "lose") return null;
   }
 
@@ -475,8 +479,7 @@ function getCalculatedOutcome(){
   if (rand < 1) {
     return "beer";
   } else if (rand < 1 + 2) {
-    const discounts = ["logo", "bill", "shot", "cocktail", "pizza", "vodka-energy", "gin-tonic"];
-    return discounts[Math.floor(Math.random() * discounts.length)];
+    return "bill"; // 1/300 ihtimalle %30 İndirim için HESAP ikonu
   } else if (rand < 3 + 3) {
     return "free-spin";
   } else {
@@ -607,9 +610,13 @@ function finish(){
       rewardText = REWARDS.discount;
     }
 
-    // Modal içeriklerini doldur ve göster
+    // Modal içeriklerini doldur
+    modalIcon.src = ICON(winSymbol);
+    modalIcon.alt = LABEL[winSymbol];
     modalTitle.innerText = "Tebrikler!";
     modalMessage.innerHTML = `<strong>${rewardText}</strong><br><br><span style="color:var(--agartha-muted);font-size:0.9em;">(Eşleşen Ürün: 3 × ${LABEL[winSymbol]})</span>`;
+    
+    // Modal'ı göster
     winModal.classList.add("show");
     
     // Alttaki metin alanını boşalt
@@ -668,7 +675,17 @@ lever.addEventListener("keydown",e=>{
 
 /* ---------- DEVELOPER PANEL INTERACTION ---------- */
 devToggleBtn.addEventListener("click", ()=>{
-  devPanel.classList.toggle("open");
+  if(devPanel.classList.contains("open")) {
+    devPanel.classList.remove("open");
+  } else {
+    // ŞİFRE KONTROLÜ
+    const psw = prompt("Geliştirici moduna giriş için şifreyi giriniz:");
+    if(psw === "agartha"){
+      devPanel.classList.add("open");
+    } else if(psw !== null) {
+      alert("Hatalı şifre!");
+    }
+  }
 });
 
 devBypassLimit.addEventListener("change", updateUI);
