@@ -150,14 +150,51 @@ body{margin:0;font-family:var(--agartha-body-font);color:var(--agartha-text);bac
   transition:color .3s var(--ease)}
 .slot-machine.armed .lever-caption{color:var(--agartha-gold)}
 
-/* ---------- RESULT ---------- */
+/* ---------- RESULT (KAYBETME DURUMU İÇİN) ---------- */
 .result-area{width:100%;max-width:520px;min-height:96px;display:flex;align-items:center;justify-content:center}
 .result-card{width:100%;text-align:center;padding:1.25rem;border-radius:4px}
 .result-card h3{font-family:var(--agartha-heading-font);margin:0 0 .35rem;font-size:1.5rem;font-weight:600}
 .result-card p{color:var(--agartha-muted);margin:0;font-size:.92rem}
-.result-card.win{background:#ffffff08;border:1px solid color-mix(in srgb,var(--agartha-gold) 40%,transparent)}
-.result-card.win h3{color:var(--agartha-gold)}
 .result-card.lose{background:#ffffff0d;border:1px solid #ffffff1a}
+
+/* ==================== WIN POP-UP (MODAL) ==================== */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.85); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s var(--ease);
+}
+.modal-overlay.show {
+  opacity: 1; pointer-events: auto;
+}
+.modal-content {
+  background: linear-gradient(135deg, #151515, #0d0d0d);
+  border: 1px solid var(--agartha-gold);
+  padding: 2.5rem 2rem; border-radius: 8px;
+  text-align: center; max-width: 400px; width: 90%;
+  transform: scale(0.9) translateY(20px);
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.9), 0 0 40px rgba(201,164,106,0.15);
+}
+.modal-overlay.show .modal-content {
+  transform: scale(1) translateY(0);
+}
+.modal-content h2 {
+  font-family: var(--agartha-heading-font); color: var(--agartha-gold);
+  margin: 0 0 1rem; font-size: 2.2rem;
+}
+.modal-content p {
+  color: var(--agartha-text); margin: 0 0 2rem; font-size: 1.1rem; line-height: 1.5;
+}
+.modal-btn {
+  background: var(--agartha-gold); color: #0d0d0d;
+  border: none; padding: 0.8rem 2.5rem; font-size: 1.05rem; font-weight: 600;
+  border-radius: 4px; cursor: pointer; transition: all 0.2s; font-family: var(--agartha-body-font);
+}
+.modal-btn:hover {
+  background: #e3c48e; box-shadow: 0 0 15px rgba(201,164,106,0.4);
+}
 
 /* ==================== DEVELOPER PANEL ==================== */
 .dev-toggle-btn{
@@ -237,6 +274,15 @@ body{margin:0;font-family:var(--agartha-body-font);color:var(--agartha-text);bac
 
     <div class="result-area" id="result"></div>
 
+    <!-- WIN POP-UP (MODAL) -->
+    <div class="modal-overlay" id="winModal">
+      <div class="modal-content">
+        <h2 id="modalTitle">Tebrikler!</h2>
+        <p id="modalMessage">Kazanılan ödül detayı...</p>
+        <button class="modal-btn" id="modalClose">Harika!</button>
+      </div>
+    </div>
+
     <!-- DEVELOPER TEST PANEL -->
     <div class="dev-panel" id="devPanel">
       <h4>🛠️ Developer Test Modu</h4>
@@ -264,7 +310,28 @@ body{margin:0;font-family:var(--agartha-body-font);color:var(--agartha-text);bac
 </div>
 
 <script>
-/* ---------- REEL STRIPS ---------- */
+/* ---------- DOM ELEMANLARI ---------- */
+const machine = document.getElementById("machine");
+const lever = document.getElementById("lever");
+const reelsEl = document.getElementById("reels");
+const resultEl = document.getElementById("result");
+const caption = document.getElementById("caption");
+const spinsEl = document.getElementById("spinsLeft");
+const resetTimerEl = document.getElementById("resetTimer");
+
+const devToggleBtn = document.getElementById("devToggleBtn");
+const devPanel = document.getElementById("devPanel");
+const devBypassLimit = document.getElementById("devBypassLimit");
+const devForceResult = document.getElementById("devForceResult");
+const devResetSpinsBtn = document.getElementById("devResetSpinsBtn");
+const devClearStorageBtn = document.getElementById("devClearStorageBtn");
+
+const winModal = document.getElementById("winModal");
+const modalTitle = document.getElementById("modalTitle");
+const modalMessage = document.getElementById("modalMessage");
+const modalClose = document.getElementById("modalClose");
+
+/* ---------- SİMGE VE SÖZLÜKLER ---------- */
 const STRIPS = [
  "logo.bill.free-spin.vodka-energy.vodka-energy.free-spin.gin-tonic.gin-tonic.free-spin.cocktail.cocktail.free-spin.cocktail.pizza.free-spin.pizza.pizza.shot.free-spin.shot.shot.free-spin.shot.beer.free-spin.beer.beer.free-spin.beer.beer.free-spin.beer".split("."),
  "logo.bill.free-spin.bill.vodka-energy.free-spin.vodka-energy.gin-tonic.free-spin.gin-tonic.cocktail.free-spin.cocktail.cocktail.free-spin.pizza.pizza.pizza.free-spin.shot.shot.free-spin.shot.shot.free-spin.beer.beer.free-spin.beer.beer.free-spin.beer".split("."),
@@ -275,17 +342,26 @@ const LABEL = {logo:"Agartha",bill:"Hesap",beer:"Bira",shot:"Shot",cocktail:"Kok
   pizza:"Pizza","vodka-energy":"Vodka & Energy","gin-tonic":"Gin & Tonic","free-spin":"Free Spin"};
 
 const REWARDS = {
-  beer: "Tebrikler! Ücretsiz Bira Kazandınız!",
-  "free-spin": "Tebrikler! +1 Ekstra Spin Kazandınız!",
-  discount: "Tebrikler! Tüm İçecek/Yiyeceklerde %30 İndirim Kazandınız!"
+  beer: "Ücretsiz Bira Kazandınız!",
+  "free-spin": "+1 Ekstra Spin Kazandınız!",
+  discount: "Tüm İçecek/Yiyeceklerde %30 İndirim Kazandınız!"
 };
+
+/* ---------- IMAGE PRELOAD (Geç yüklenme engelleyici) ---------- */
+function preloadImages() {
+  Object.keys(LABEL).forEach(id => {
+    const img = new Image();
+    img.src = ICON(id);
+  });
+}
+preloadImages(); // Script başlar başlamaz tüm ikonları tarayıcı önbelleğine zorla yükler.
 
 const STOP_AT = [800, 1200, 2000];
 const JACKPOT_EXTRA = 3000;
 const LAND_MS = 560;
 const SPEED   = 26;
 
-const reelsEl = document.getElementById("reels");
+/* ---------- ÇARK KURULUMU ---------- */
 const reels = STRIPS.map(strip=>{
   const el = document.createElement("div"); el.className = "reel";
   const st = document.createElement("div"); st.className = "strip";
@@ -320,7 +396,7 @@ function paint(r){
 }
 const center = r => r.strip[((Math.round(r.pos)%r.n)+r.n)%r.n];
 
-/* ---------- SAAT BAŞI HAK & PERSISTENCE (LOCALSTORAGE) ---------- */
+/* ---------- SAAT BAŞI HAK & LOCALSTORAGE ---------- */
 const HOURLY_LIMIT = 10;
 const KEY_SPINS = "agartha_spins_left";
 const KEY_HOUR = "agartha_hour_stamp";
@@ -331,6 +407,19 @@ let running = false;
 function getHourStamp(){
   const now = new Date();
   return `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}-${now.getHours()}`;
+}
+
+function updateUI(){
+  if(!spinsEl || !lever || !machine || !caption) return;
+  spinsEl.textContent = `${spinsLeft} Hak Kaldı`;
+  const isBypass = devBypassLimit ? devBypassLimit.checked : false;
+  const canSpin = (spinsLeft > 0 || isBypass) && !running;
+  
+  lever.disabled = !canSpin;
+  lever.classList.toggle("ready", canSpin);
+  lever.classList.toggle("spent", !canSpin);
+  machine.classList.toggle("armed", canSpin);
+  caption.textContent = running ? "Dönüyor…" : (canSpin ? "Kolu Çekin" : "Hakkınız Bitti (Saat Başı Yenilenir)");
 }
 
 function initSpins(){
@@ -353,37 +442,24 @@ function saveSpins(){
   updateUI();
 }
 
-function updateUI(){
-  document.getElementById("spinsLeft").textContent = `${spinsLeft} Hak Kaldı`;
-  const isBypass = document.getElementById("devBypassLimit").checked;
-  const canSpin = (spinsLeft > 0 || isBypass) && !running;
-  
-  lever.disabled = !canSpin;
-  lever.classList.toggle("ready", canSpin);
-  lever.classList.toggle("spent", !canSpin);
-  machine.classList.toggle("armed", canSpin);
-  caption.textContent = running ? "Dönüyor…" : (canSpin ? "Kolu Çekin" : "Hakkınız Bitti (Saat Başı Yenilenir)");
-}
-
 function updateResetTimer(){
   const now = new Date();
   const nextHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1, 0, 0);
   const diff = Math.max(0, nextHour - now);
   const mins = Math.floor(diff / 60000);
   const secs = Math.floor((diff % 60000) / 1000);
-  document.getElementById("resetTimer").textContent = `Yenilenmeye kalan süre: ${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+  if(resetTimerEl) {
+    resetTimerEl.textContent = `Yenilenmeye kalan süre: ${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+  }
   
-  // Saat değiştiyse hakları otomatik yenile
   if(getHourStamp() !== localStorage.getItem(KEY_HOUR)){
     initSpins();
   }
 }
-setInterval(updateResetTimer, 1000);
-updateResetTimer();
 
-/* ---------- OLASILIK MOTORU (1/600 BIRA, 1/300 İNDİRİM, 1/200 FREE SPIN) ---------- */
+/* ---------- OLASILIK MOTORU ---------- */
 function getCalculatedOutcome(){
-  const forced = document.getElementById("devForceResult").value;
+  const forced = devForceResult ? devForceResult.value : "auto";
   if(forced !== "auto"){
     if(forced === "beer") return "beer";
     if(forced === "free-spin") return "free-spin";
@@ -394,37 +470,28 @@ function getCalculatedOutcome(){
     if(forced === "lose") return null;
   }
 
-  // Toplam Ortak Kat: 600
-  // Bira: 1 / 600
-  // Diğer ürünlerde %30 İndirim: 1 / 300 = 2 / 600
-  // Free Spin: 1 / 200 = 3 / 600
-  // Toplam Kazanma Oranı: 6 / 600 (1%)
-  // Kaybetme Oranı: 594 / 600 (%99)
   const rand = Math.random() * 600;
 
   if (rand < 1) {
-    return "beer"; // 1/600
+    return "beer";
   } else if (rand < 1 + 2) {
-    // 2/600 -> 1/300 %30 İndirim
     const discounts = ["logo", "bill", "shot", "cocktail", "pizza", "vodka-energy", "gin-tonic"];
     return discounts[Math.floor(Math.random() * discounts.length)];
   } else if (rand < 3 + 3) {
-    return "free-spin"; // 3/600 -> 1/200
+    return "free-spin";
   } else {
-    return null; // Kaybetme
+    return null;
   }
 }
 
 function getTargetPositionsForOutcome(outcomeSymbol){
   if(outcomeSymbol){
-    // 3 Çarkı da seçilen sembolde durdur
     return reels.map(r => {
       const validIndexes = [];
       r.strip.forEach((sym, idx) => { if(sym === outcomeSymbol) validIndexes.push(idx); });
       return validIndexes[Math.floor(Math.random() * validIndexes.length)];
     });
   } else {
-    // 3 Çark aynı gelmeyecek şekilde rastgele hedef seç
     let t0, t1, t2;
     do {
       t0 = Math.floor(Math.random() * reels[0].n);
@@ -436,9 +503,6 @@ function getTargetPositionsForOutcome(outcomeSymbol){
 }
 
 /* ---------- SES KONTROLÜ ---------- */
-const machine=document.getElementById("machine"), lever=document.getElementById("lever"),
-      resultEl=document.getElementById("result"), caption=document.getElementById("caption");
-
 const audio={normal:new Audio("./sounds/cark-normal.mp3"),agartha:new Audio("./sounds/cark-agartha.mp3"),
   slot3:new Audio("./sounds/slot-3.mp3"),jackpot:new Audio("./sounds/jackpot.mp3"),thud:new Audio("./sounds/thud.mp3")};
 audio.thud.playbackRate=3;
@@ -451,7 +515,7 @@ function setBusy(b){
 }
 
 function spin(){
-  const isBypass = document.getElementById("devBypassLimit").checked;
+  const isBypass = devBypassLimit ? devBypassLimit.checked : false;
   if(running || (spinsLeft <= 0 && !isBypass)) return;
   
   if(!isBypass) {
@@ -459,9 +523,11 @@ function spin(){
     saveSpins();
   }
 
-  machine.classList.remove("win"); resultEl.innerHTML=""; stopAll(); setBusy(true);
+  machine.classList.remove("win"); 
+  resultEl.innerHTML=""; 
+  stopAll(); 
+  setBusy(true);
 
-  // Olasılık Motorundan Sonucu Al ve Hedef Pozisyonları Hesapla
   const outcomeSymbol = getCalculatedOutcome();
   const targets = getTargetPositionsForOutcome(outcomeSymbol);
 
@@ -526,6 +592,7 @@ function finish(){
   setBusy(false);
   
   if(s[0]===s[1] && s[1]===s[2]){
+    // KAZANMA DURUMU
     const winSymbol = s[0];
     machine.classList.add("win"); play("jackpot");
 
@@ -534,18 +601,22 @@ function finish(){
       rewardText = REWARDS.beer;
     } else if(winSymbol === "free-spin"){
       rewardText = REWARDS["free-spin"];
-      spinsLeft++; // Free spin kazandığında hak ekle
+      spinsLeft++;
       saveSpins();
     } else {
       rewardText = REWARDS.discount;
     }
 
-    resultEl.innerHTML=`
-      <div class="result-card win">
-        <h3>${rewardText}</h3>
-        <p>Eşleşen Ürün: 3 × ${LABEL[winSymbol]}</p>
-      </div>`;
+    // Modal içeriklerini doldur ve göster
+    modalTitle.innerText = "Tebrikler!";
+    modalMessage.innerHTML = `<strong>${rewardText}</strong><br><br><span style="color:var(--agartha-muted);font-size:0.9em;">(Eşleşen Ürün: 3 × ${LABEL[winSymbol]})</span>`;
+    winModal.classList.add("show");
+    
+    // Alttaki metin alanını boşalt
+    resultEl.innerHTML = "";
+
   }else{
+    // KAYBETME DURUMU
     play("thud");
     resultEl.innerHTML=`
       <div class="result-card lose">
@@ -554,6 +625,11 @@ function finish(){
       </div>`;
   }
 }
+
+/* ---------- MODAL KAPATMA ---------- */
+modalClose.addEventListener("click", () => {
+  winModal.classList.remove("show");
+});
 
 /* ---------- LEVER INTERACTION ---------- */
 let drag=null;
@@ -591,12 +667,6 @@ lever.addEventListener("keydown",e=>{
 });
 
 /* ---------- DEVELOPER PANEL INTERACTION ---------- */
-const devToggleBtn = document.getElementById("devToggleBtn");
-const devPanel = document.getElementById("devPanel");
-const devBypassLimit = document.getElementById("devBypassLimit");
-const devResetSpinsBtn = document.getElementById("devResetSpinsBtn");
-const devClearStorageBtn = document.getElementById("devClearStorageBtn");
-
 devToggleBtn.addEventListener("click", ()=>{
   devPanel.classList.toggle("open");
 });
@@ -615,7 +685,9 @@ devClearStorageBtn.addEventListener("click", ()=>{
   alert("LocalStorage temizlendi!");
 });
 
-// Başlangıç Kurulumu
+/* ---------- BAŞLANGIÇ ÇALIŞTIRMA ---------- */
+setInterval(updateResetTimer, 1000);
+updateResetTimer();
 initSpins();
 measure();
 </script>
