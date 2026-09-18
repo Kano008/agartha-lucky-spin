@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="tr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap">
 <style>
-/* ---------- Agartha tokens (verbatim from the live site) ---------- */
+/* ---------- Agartha tokens ---------- */
 :root{
   --agartha-bg:#0d0d0d; --agartha-bg-alt:#151515;
   --agartha-text:#e7e1d6; --agartha-muted:#8d8579;
@@ -24,28 +24,30 @@ body{margin:0;font-family:var(--agartha-body-font);color:var(--agartha-text);bac
 
 .game-page{min-height:100dvh;display:flex;flex-direction:column;
   background:radial-gradient(circle at 50% 30%,#8a5a2b26,transparent 60%),var(--agartha-bg)}
-.top-bar{padding:1.5rem;text-align:center;border-bottom:1px solid color-mix(in srgb,var(--agartha-gold) 25%,transparent)}
+.top-bar{padding:1.5rem;text-align:center;border-bottom:1px solid color-mix(in srgb,var(--agartha-gold) 25%,transparent);position:relative}
 .top-bar-lead{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
 .home-link{color:var(--agartha-muted);letter-spacing:.12em;text-transform:uppercase;font-size:.75rem;text-decoration:none}
 .home-link:hover{color:var(--agartha-gold)}
 .page-title{font-family:var(--agartha-heading-font);letter-spacing:.1em;color:var(--agartha-gold);text-transform:uppercase;margin:0;font-size:1.75rem;font-weight:500}
 .game-main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.75rem;padding:2rem 1.5rem}
-.intro{text-align:center;max-width:400px}
+.intro{text-align:center;max-width:420px}
 .intro h2{font-family:var(--agartha-heading-font);font-size:2.2rem;font-weight:500;margin:0 0 .5rem}
 .intro p{color:var(--agartha-muted);margin:0;line-height:1.5;font-size:.92rem}
-.spins-left{font-size:.7rem;letter-spacing:.19em;text-transform:uppercase;color:var(--agartha-gold);margin-top:1rem}
+.spins-info{margin-top:1rem;display:flex;flex-direction:column;gap:.25rem;align-items:center}
+.spins-left{font-size:.8rem;letter-spacing:.19em;text-transform:uppercase;color:var(--agartha-gold);font-weight:600}
+.reset-timer{font-size:.7rem;color:var(--agartha-muted);letter-spacing:.08em}
 
 /* ==================== CABINET ==================== */
 .slot-machine{
   width:100%;max-width:520px;
   background:color-mix(in srgb,var(--agartha-bg-alt) 80%,transparent);
   border:1px solid color-mix(in srgb,var(--agartha-gold) 40%,transparent);
-  border-radius:4px;                       /* site radius (was 12px) */
+  border-radius:4px;
   padding:1.5rem;box-shadow:0 12px 40px #00000080;
 }
 .cabinet{display:flex;align-items:stretch;gap:1rem}
 
-/* ---------- reels: 3 rows visible, middle row is the payline ---------- */
+/* ---------- reels ---------- */
 .reels-container{
   flex:1;min-width:0;position:relative;
   background:#050505;
@@ -54,7 +56,6 @@ body{margin:0;font-family:var(--agartha-body-font);color:var(--agartha-text);bac
   display:flex;gap:.5rem;
   box-shadow:inset 0 8px 16px #000c;
 }
-/* faint glass sheen over the drums */
 .reels-container::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:5;border-radius:4px;
   background:linear-gradient(112deg,#ffffff07 0%,#0000 34%,#0000 72%,#ffffff05 100%)}
 .reel{
@@ -64,7 +65,6 @@ body{margin:0;font-family:var(--agartha-body-font);color:var(--agartha-text);bac
   border:1px solid color-mix(in srgb,var(--agartha-gold) 12%,transparent);
   border-radius:3px;box-shadow:inset 0 0 26px #000a;
 }
-/* top / bottom fade so the strip reads as a continuous drum */
 .reel::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:3;
   background:linear-gradient(#050505e0 0%,#05050526 13%,#0000 30%,#0000 70%,#05050526 87%,#050505e0 100%)}
 .strip{position:absolute;left:0;right:0;top:0;will-change:transform;filter:blur(var(--mb,0px))}
@@ -75,7 +75,7 @@ body{margin:0;font-family:var(--agartha-body-font);color:var(--agartha-text);bac
 .cell.is-payline img{opacity:1;filter:none;transform:scale(1.26)}
 .reel.is-spinning .cell img{opacity:.66;filter:grayscale(.28) brightness(.88);transform:none;transition:none}
 
-/* payline: gold hairlines + edge notches */
+/* payline */
 .payline{position:absolute;left:0;right:0;top:50%;height:var(--payh,33%);transform:translateY(-50%);pointer-events:none;z-index:4}
 .payline::before,.payline::after{content:"";position:absolute;left:.5rem;right:.5rem;height:1px;
   background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--agartha-gold) 62%,transparent) 16%,
@@ -92,7 +92,7 @@ body{margin:0;font-family:var(--agartha-body-font);color:var(--agartha-text);bac
   animation:payglow 1.1s ease-in-out 3}
 @keyframes payglow{50%{opacity:.4}}
 
-/* ==================== LEVER (replaces the Spin button) ==================== */
+/* ==================== LEVER ==================== */
 .lever{
   --pull:0; --hover:0;
   position:relative;width:62px;flex:none;
@@ -102,7 +102,6 @@ body{margin:0;font-family:var(--agartha-body-font);color:var(--agartha-text);bac
 .lever:active{cursor:grabbing}
 .lever.ready:hover{--hover:.09}
 
-/* mounting plate the shaft sinks into */
 .lever-base{position:absolute;left:50%;bottom:0;transform:translateX(-50%);
   width:44px;height:40px;border-radius:3px;
   background:linear-gradient(#201d19,#0b0a09);
@@ -112,7 +111,7 @@ body{margin:0;font-family:var(--agartha-body-font);color:var(--agartha-text);bac
   width:16px;height:16px;border-radius:50%;
   background:radial-gradient(circle at 40% 32%,#413b31,#080808 70%);
   border:1px solid #00000094;box-shadow:inset 0 2px 3px #000000b3}
-/* the slot the shaft travels in */
+
 .lever-track{position:absolute;left:50%;transform:translateX(-50%);
   top:40%;bottom:36px;width:8px;border-radius:999px;
   background:linear-gradient(#00000000,#00000073);
@@ -151,6 +150,42 @@ body{margin:0;font-family:var(--agartha-body-font);color:var(--agartha-text);bac
   transition:color .3s var(--ease)}
 .slot-machine.armed .lever-caption{color:var(--agartha-gold)}
 
+/* ---------- RESULT ---------- */
+.result-area{width:100%;max-width:520px;min-height:96px;display:flex;align-items:center;justify-content:center}
+.result-card{width:100%;text-align:center;padding:1.25rem;border-radius:4px}
+.result-card h3{font-family:var(--agartha-heading-font);margin:0 0 .35rem;font-size:1.5rem;font-weight:600}
+.result-card p{color:var(--agartha-muted);margin:0;font-size:.92rem}
+.result-card.win{background:#ffffff08;border:1px solid color-mix(in srgb,var(--agartha-gold) 40%,transparent)}
+.result-card.win h3{color:var(--agartha-gold)}
+.result-card.lose{background:#ffffff0d;border:1px solid #ffffff1a}
+
+/* ==================== DEVELOPER PANEL ==================== */
+.dev-toggle-btn{
+  position:absolute;right:1rem;top:1.5rem;
+  background:rgba(201, 164, 106, 0.15);
+  border:1px solid var(--agartha-gold);
+  color:var(--agartha-gold);
+  font-size:.75rem;padding:.35rem .75rem;border-radius:4px;
+  cursor:pointer;transition:all .2s ease;
+}
+.dev-toggle-btn:hover{background:var(--agartha-gold);color:#000}
+.dev-panel{
+  display:none;width:100%;max-width:520px;
+  background:#121212;border:1px dashed var(--agartha-gold);
+  border-radius:4px;padding:1rem;margin-top:1rem;
+  font-size:.82rem;color:var(--agartha-text);
+}
+.dev-panel.open{display:block}
+.dev-panel h4{margin:0 0 .75rem;color:var(--agartha-gold);font-size:1rem;text-transform:uppercase;letter-spacing:.05em}
+.dev-group{margin-bottom:.75rem;display:flex;flex-direction:column;gap:.35rem}
+.dev-group label{color:var(--agartha-muted);font-size:.78rem}
+.dev-group select, .dev-group button{
+  background:#202020;border:1px solid #333;color:var(--agartha-text);
+  padding:.4rem .6rem;border-radius:3px;font-size:.8rem;cursor:pointer;
+}
+.dev-group button:hover{border-color:var(--agartha-gold);color:var(--agartha-gold)}
+.dev-row{display:flex;gap:.5rem;align-items:center}
+
 @media (max-width:600px){
   .slot-machine{padding:1rem}
   .cabinet{gap:.65rem}
@@ -161,29 +196,29 @@ body{margin:0;font-family:var(--agartha-body-font);color:var(--agartha-text);bac
   .lever-arm{width:10px;bottom:18px;height:52%}
   .knob{width:30px;height:30px}
   .intro h2{font-size:1.8rem}
+  .dev-toggle-btn{position:static;margin-top:.5rem;display:inline-block}
 }
-
-/* ---------- result ---------- */
-.result-area{width:100%;max-width:520px;min-height:96px;display:flex;align-items:center;justify-content:center}
-.result-card{width:100%;text-align:center;padding:1.25rem;border-radius:4px}
-.result-card h3{font-family:var(--agartha-heading-font);margin:0 0 .35rem;font-size:1.35rem;font-weight:500}
-.result-card p{color:var(--agartha-muted);margin:0;font-size:.92rem}
-.result-card.win{background:#ffffff08;border:1px solid color-mix(in srgb,var(--agartha-gold) 28%,transparent)}
-.result-card.lose{background:#ffffff0d;border:1px solid #ffffff1a}
 </style>
 </head>
 <body>
 <div class="game-page">
   <header class="top-bar">
-    <div class="top-bar-lead"><a class="home-link" href="#">&larr; Home</a><span class="home-link">TR / EN</span></div>
+    <div class="top-bar-lead">
+      <a class="home-link" href="#">&larr; Home</a>
+      <span class="home-link">TR / EN</span>
+    </div>
     <h1 class="page-title">Lucky Spin</h1>
+    <button class="dev-toggle-btn" id="devToggleBtn">🛠️ Dev Mode</button>
   </header>
 
   <main class="game-main">
     <div class="intro">
-      <h2>Try your luck</h2>
-      <p>Match 3 Agartha logos for a free vodka &amp; energy, 3 spin symbols for a free spin, 3 bill symbols for 10% off the entire tab, or 3 identical symbols for category discounts (10–40%).</p>
-      <p class="spins-left" id="spinsLeft">10 spins left</p>
+      <h2>Şansını Deneyin</h2>
+      <p>3 Ücretsiz Bira logosu ile ücretsiz bira, 3 Free Spin ile +1 ekstra hak veya 3 aynı ürün logosu ile %30 İndirim kazanın!</p>
+      <div class="spins-info">
+        <span class="spins-left" id="spinsLeft">10 Hak Kaldı</span>
+        <span class="reset-timer" id="resetTimer">Sıfırlanmaya kalan süre: --:--</span>
+      </div>
     </div>
 
     <div class="slot-machine armed" id="machine">
@@ -197,29 +232,58 @@ body{margin:0;font-family:var(--agartha-body-font);color:var(--agartha-text);bac
           <span class="lever-base"></span>
         </button>
       </div>
-      <p class="lever-caption" id="caption">Pull the lever</p>
+      <p class="lever-caption" id="caption">Kolu Çekin</p>
     </div>
 
     <div class="result-area" id="result"></div>
+
+    <!-- DEVELOPER TEST PANEL -->
+    <div class="dev-panel" id="devPanel">
+      <h4>🛠️ Developer Test Modu</h4>
+      <div class="dev-group">
+        <label>
+          <input type="checkbox" id="devBypassLimit"> Sınırsız Hak / Süre Engelini Kaldır
+        </label>
+      </div>
+      <div class="dev-group">
+        <label>Sonraki Spin Sonucunu Zorla (Test):</label>
+        <select id="devForceResult">
+          <option value="auto">Otomatik Oransal (1/600 Bira, 1/300 İndirim, 1/200 Free Spin)</option>
+          <option value="beer">Zorla: Ücretsiz Bira (1/600)</option>
+          <option value="discount">Zorla: %30 İndirim (1/300)</option>
+          <option value="free-spin">Zorla: Free Spin (1/200)</option>
+          <option value="lose">Zorla: Kaybet (Kazanma Olmasın)</option>
+        </select>
+      </div>
+      <div class="dev-row">
+        <button id="devResetSpinsBtn">Hakları 10 Yap</button>
+        <button id="devClearStorageBtn">Tüm Hafızayı Sıfırla</button>
+      </div>
+    </div>
   </main>
 </div>
 
 <script>
-/* ---------- reel strips: copied verbatim from the live bundle ---------- */
+/* ---------- REEL STRIPS ---------- */
 const STRIPS = [
  "logo.bill.free-spin.vodka-energy.vodka-energy.free-spin.gin-tonic.gin-tonic.free-spin.cocktail.cocktail.free-spin.cocktail.pizza.free-spin.pizza.pizza.shot.free-spin.shot.shot.free-spin.shot.beer.free-spin.beer.beer.free-spin.beer.beer.free-spin.beer".split("."),
  "logo.bill.free-spin.bill.vodka-energy.free-spin.vodka-energy.gin-tonic.free-spin.gin-tonic.cocktail.free-spin.cocktail.cocktail.free-spin.pizza.pizza.pizza.free-spin.shot.shot.free-spin.shot.shot.free-spin.beer.beer.free-spin.beer.beer.free-spin.beer".split("."),
  "logo.bill.free-spin.vodka-energy.vodka-energy.free-spin.gin-tonic.gin-tonic.free-spin.cocktail.cocktail.free-spin.cocktail.pizza.free-spin.pizza.pizza.pizza.free-spin.shot.shot.free-spin.shot.shot.free-spin.beer.beer.free-spin.beer.beer.free-spin.beer".split(".")
 ];
 const ICON = id => `./drinks/${id}.png`;
-const LABEL = {logo:"Agartha",bill:"Bill",beer:"Beer",shot:"Shot",cocktail:"Cocktail",
-  pizza:"Pizza","vodka-energy":"Vodka & Energy","gin-tonic":"Gin & Tonic","free-spin":"Free spin"};
+const LABEL = {logo:"Agartha",bill:"Hesap",beer:"Bira",shot:"Shot",cocktail:"Kokteyl",
+  pizza:"Pizza","vodka-energy":"Vodka & Energy","gin-tonic":"Gin & Tonic","free-spin":"Free Spin"};
 
-/* same stop cadence as the live game (Te = [800,1200], Ee.normal = 800) */
+const REWARDS = {
+  beer: "Tebrikler! Ücretsiz Bira Kazandınız!",
+  "free-spin": "Tebrikler! +1 Ekstra Spin Kazandınız!",
+  discount: "Tebrikler! Tüm İçecek/Yiyeceklerde %30 İndirim Kazandınız!"
+};
+
 const STOP_AT = [800, 1200, 2000];
 const JACKPOT_EXTRA = 3000;
 const LAND_MS = 560;
-const SPEED   = 26;   // cells / second while free-running
+const SPEED   = 26;
 
 const reelsEl = document.getElementById("reels");
 const reels = STRIPS.map(strip=>{
@@ -238,7 +302,7 @@ const reels = STRIPS.map(strip=>{
 
 let CELL = 0;
 function measure(){
-  CELL = reels[0].el.clientHeight / 3;     /* exact: 3 rows fill the window */
+  CELL = reels[0].el.clientHeight / 3;
   if(!CELL) return;
   reels.forEach(r=>{
     r.cells.forEach(c=>{c.style.height = CELL+"px"});
@@ -256,10 +320,124 @@ function paint(r){
 }
 const center = r => r.strip[((Math.round(r.pos)%r.n)+r.n)%r.n];
 
-let running=false, spinsLeft=10;
+/* ---------- SAAT BAŞI HAK & PERSISTENCE (LOCALSTORAGE) ---------- */
+const HOURLY_LIMIT = 10;
+const KEY_SPINS = "agartha_spins_left";
+const KEY_HOUR = "agartha_hour_stamp";
+
+let spinsLeft = HOURLY_LIMIT;
+let running = false;
+
+function getHourStamp(){
+  const now = new Date();
+  return `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}-${now.getHours()}`;
+}
+
+function initSpins(){
+  const currentStamp = getHourStamp();
+  const savedStamp = localStorage.getItem(KEY_HOUR);
+  
+  if(savedStamp !== currentStamp){
+    localStorage.setItem(KEY_HOUR, currentStamp);
+    localStorage.setItem(KEY_SPINS, HOURLY_LIMIT);
+    spinsLeft = HOURLY_LIMIT;
+  } else {
+    const savedSpins = localStorage.getItem(KEY_SPINS);
+    spinsLeft = savedSpins !== null ? parseInt(savedSpins, 10) : HOURLY_LIMIT;
+  }
+  updateUI();
+}
+
+function saveSpins(){
+  localStorage.setItem(KEY_SPINS, spinsLeft);
+  updateUI();
+}
+
+function updateUI(){
+  document.getElementById("spinsLeft").textContent = `${spinsLeft} Hak Kaldı`;
+  const isBypass = document.getElementById("devBypassLimit").checked;
+  const canSpin = (spinsLeft > 0 || isBypass) && !running;
+  
+  lever.disabled = !canSpin;
+  lever.classList.toggle("ready", canSpin);
+  lever.classList.toggle("spent", !canSpin);
+  machine.classList.toggle("armed", canSpin);
+  caption.textContent = running ? "Dönüyor…" : (canSpin ? "Kolu Çekin" : "Hakkınız Bitti (Saat Başı Yenilenir)");
+}
+
+function updateResetTimer(){
+  const now = new Date();
+  const nextHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1, 0, 0);
+  const diff = Math.max(0, nextHour - now);
+  const mins = Math.floor(diff / 60000);
+  const secs = Math.floor((diff % 60000) / 1000);
+  document.getElementById("resetTimer").textContent = `Yenilenmeye kalan süre: ${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+  
+  // Saat değiştiyse hakları otomatik yenile
+  if(getHourStamp() !== localStorage.getItem(KEY_HOUR)){
+    initSpins();
+  }
+}
+setInterval(updateResetTimer, 1000);
+updateResetTimer();
+
+/* ---------- OLASILIK MOTORU (1/600 BIRA, 1/300 İNDİRİM, 1/200 FREE SPIN) ---------- */
+function getCalculatedOutcome(){
+  const forced = document.getElementById("devForceResult").value;
+  if(forced !== "auto"){
+    if(forced === "beer") return "beer";
+    if(forced === "free-spin") return "free-spin";
+    if(forced === "discount"){
+      const discounts = ["logo", "bill", "shot", "cocktail", "pizza", "vodka-energy", "gin-tonic"];
+      return discounts[Math.floor(Math.random() * discounts.length)];
+    }
+    if(forced === "lose") return null;
+  }
+
+  // Toplam Ortak Kat: 600
+  // Bira: 1 / 600
+  // Diğer ürünlerde %30 İndirim: 1 / 300 = 2 / 600
+  // Free Spin: 1 / 200 = 3 / 600
+  // Toplam Kazanma Oranı: 6 / 600 (1%)
+  // Kaybetme Oranı: 594 / 600 (%99)
+  const rand = Math.random() * 600;
+
+  if (rand < 1) {
+    return "beer"; // 1/600
+  } else if (rand < 1 + 2) {
+    // 2/600 -> 1/300 %30 İndirim
+    const discounts = ["logo", "bill", "shot", "cocktail", "pizza", "vodka-energy", "gin-tonic"];
+    return discounts[Math.floor(Math.random() * discounts.length)];
+  } else if (rand < 3 + 3) {
+    return "free-spin"; // 3/600 -> 1/200
+  } else {
+    return null; // Kaybetme
+  }
+}
+
+function getTargetPositionsForOutcome(outcomeSymbol){
+  if(outcomeSymbol){
+    // 3 Çarkı da seçilen sembolde durdur
+    return reels.map(r => {
+      const validIndexes = [];
+      r.strip.forEach((sym, idx) => { if(sym === outcomeSymbol) validIndexes.push(idx); });
+      return validIndexes[Math.floor(Math.random() * validIndexes.length)];
+    });
+  } else {
+    // 3 Çark aynı gelmeyecek şekilde rastgele hedef seç
+    let t0, t1, t2;
+    do {
+      t0 = Math.floor(Math.random() * reels[0].n);
+      t1 = Math.floor(Math.random() * reels[1].n);
+      t2 = Math.floor(Math.random() * reels[2].n);
+    } while(reels[0].strip[t0] === reels[1].strip[t1] && reels[1].strip[t1] === reels[2].strip[t2]);
+    return [t0, t1, t2];
+  }
+}
+
+/* ---------- SES KONTROLÜ ---------- */
 const machine=document.getElementById("machine"), lever=document.getElementById("lever"),
-      resultEl=document.getElementById("result"), spinsEl=document.getElementById("spinsLeft"),
-      caption=document.getElementById("caption");
+      resultEl=document.getElementById("result"), caption=document.getElementById("caption");
 
 const audio={normal:new Audio("./sounds/cark-normal.mp3"),agartha:new Audio("./sounds/cark-agartha.mp3"),
   slot3:new Audio("./sounds/slot-3.mp3"),jackpot:new Audio("./sounds/jackpot.mp3"),thud:new Audio("./sounds/thud.mp3")};
@@ -269,22 +447,25 @@ const stopAll=()=>Object.values(audio).forEach(a=>{a.pause();a.currentTime=0});
 
 function setBusy(b){
   running=b;
-  lever.disabled = b || spinsLeft<=0;
-  lever.classList.toggle("ready", !b && spinsLeft>0);
-  lever.classList.toggle("spent", spinsLeft<=0);
-  machine.classList.toggle("armed", !b && spinsLeft>0);
-  caption.textContent = b ? "Spinning…" : (spinsLeft>0 ? "Pull the lever" : "No spins left");
+  updateUI();
 }
 
 function spin(){
-  if(running || spinsLeft<=0) return;
-  spinsLeft--; spinsEl.textContent = spinsLeft+" spins left";
+  const isBypass = document.getElementById("devBypassLimit").checked;
+  if(running || (spinsLeft <= 0 && !isBypass)) return;
+  
+  if(!isBypass) {
+    spinsLeft--;
+    saveSpins();
+  }
+
   machine.classList.remove("win"); resultEl.innerHTML=""; stopAll(); setBusy(true);
 
-  /* uniform over strip positions = the same symbol distribution the live
-     game gets from picking a random element out of the strip */
-  const targets = reels.map(r=>Math.floor(Math.random()*r.n));
-  const jackpot = targets.every((t,i)=>reels[i].strip[t]==="logo");
+  // Olasılık Motorundan Sonucu Al ve Hedef Pozisyonları Hesapla
+  const outcomeSymbol = getCalculatedOutcome();
+  const targets = getTargetPositionsForOutcome(outcomeSymbol);
+
+  const jackpot = outcomeSymbol === "logo";
   play(jackpot?"agartha":"normal");
 
   const stops=[STOP_AT[0],STOP_AT[1],STOP_AT[2]+(jackpot?JACKPOT_EXTRA:0)];
@@ -295,30 +476,28 @@ function spin(){
   });
 
   const t0=performance.now(); let last=t0;
-  /* rAF pauses in a background tab; fall back to a timer so a spin never hangs */
   const schedule=fn=>document.hidden?setTimeout(()=>fn(performance.now()),100):requestAnimationFrame(fn);
+  
   function frame(now){
     const dt=Math.min(50,now-last)/1000; last=now;
-    const t=now-t0; let allDone=true;
+    let allDone=true;
 
     reels.forEach((r,i)=>{
       if(!r.spinning) return;
       allDone=false;
       const landStart=Math.max(200, r.stopAt-LAND_MS);
-      if(t<landStart){
+      if((now-t0)<landStart){
         r.pos+=SPEED*dt;
         r.st.style.setProperty("--mb","1.4px");
       }else{
         if(!r.land){
           const from=r.pos;
           let dist=((r.target-from)%r.n+r.n)%r.n;
-          while(dist<2.5) dist+=r.n;         // never snap backwards
-          r.land={from,dist,t0:t};
+          while(dist<2.5) dist+=r.n;
+          r.land={from,dist,t0:(now-t0)};
         }
-        const p=Math.min(1,(t-r.land.t0)/LAND_MS);
+        const p=Math.min(1,((now-t0)-r.land.t0)/LAND_MS);
         const e=1-Math.pow(1-p,3);
-        /* small overshoot near the end: the drum drops past the payline and
-           rocks back, the way a mechanical reel settles */
         const bounce=p>.72?Math.sin((p-.72)/.28*Math.PI)*.16*(1-p):0;
         r.pos=r.land.from+r.land.dist*e+bounce;
         r.st.style.setProperty("--mb",(1.4*(1-p)).toFixed(2)+"px");
@@ -345,16 +524,38 @@ function finish(){
   stopAll();
   const s=reels.map(center);
   setBusy(false);
-  if(s[0]===s[1]&&s[1]===s[2]){
+  
+  if(s[0]===s[1] && s[1]===s[2]){
+    const winSymbol = s[0];
     machine.classList.add("win"); play("jackpot");
-    resultEl.innerHTML=`<div class="result-card win"><h3>You won!</h3><p>3 × ${LABEL[s[0]]}</p></div>`;
+
+    let rewardText = "";
+    if(winSymbol === "beer"){
+      rewardText = REWARDS.beer;
+    } else if(winSymbol === "free-spin"){
+      rewardText = REWARDS["free-spin"];
+      spinsLeft++; // Free spin kazandığında hak ekle
+      saveSpins();
+    } else {
+      rewardText = REWARDS.discount;
+    }
+
+    resultEl.innerHTML=`
+      <div class="result-card win">
+        <h3>${rewardText}</h3>
+        <p>Eşleşen Ürün: 3 × ${LABEL[winSymbol]}</p>
+      </div>`;
   }else{
     play("thud");
-    resultEl.innerHTML=`<div class="result-card lose"><h3>So close</h3><p>${s.map(x=>LABEL[x]).join(" · ")}</p></div>`;
+    resultEl.innerHTML=`
+      <div class="result-card lose">
+        <h3>Tekrar Deneyin</h3>
+        <p>${s.map(x=>LABEL[x]).join(" · ")}</p>
+      </div>`;
   }
 }
 
-/* ---------- lever interaction: drag it down, or tap / keyboard ---------- */
+/* ---------- LEVER INTERACTION ---------- */
 let drag=null;
 const MAX_PULL=90;
 const setPull=v=>lever.style.setProperty("--pull",Math.max(0,Math.min(1,v)));
@@ -383,15 +584,39 @@ lever.addEventListener("pointermove",e=>{
   setPull(v);
   if(v>=.85){ drag=null; release(true); }
 });
-lever.addEventListener("pointerup",()=>{
-  if(!drag) return;
-  drag=null; pullAndFire();          /* a tap counts as a pull */
-});
+lever.addEventListener("pointerup",()=>{ if(drag){drag=null; pullAndFire();} });
 lever.addEventListener("pointercancel",()=>{ if(drag){drag=null; release(false);} });
 lever.addEventListener("keydown",e=>{
   if(e.key===" "||e.key==="Enter"){ e.preventDefault(); if(!lever.disabled) pullAndFire(); }
 });
 
+/* ---------- DEVELOPER PANEL INTERACTION ---------- */
+const devToggleBtn = document.getElementById("devToggleBtn");
+const devPanel = document.getElementById("devPanel");
+const devBypassLimit = document.getElementById("devBypassLimit");
+const devResetSpinsBtn = document.getElementById("devResetSpinsBtn");
+const devClearStorageBtn = document.getElementById("devClearStorageBtn");
+
+devToggleBtn.addEventListener("click", ()=>{
+  devPanel.classList.toggle("open");
+});
+
+devBypassLimit.addEventListener("change", updateUI);
+
+devResetSpinsBtn.addEventListener("click", ()=>{
+  spinsLeft = HOURLY_LIMIT;
+  saveSpins();
+  alert("Haklar 10 olarak yenilendi!");
+});
+
+devClearStorageBtn.addEventListener("click", ()=>{
+  localStorage.clear();
+  initSpins();
+  alert("LocalStorage temizlendi!");
+});
+
+// Başlangıç Kurulumu
+initSpins();
 measure();
 </script>
 </body>
