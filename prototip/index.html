@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="tr">
 <head>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agartha | Lucky Spin — prototype</title>
@@ -256,7 +257,7 @@ body{margin:0;font-family:var(--agartha-body-font);color:var(--agartha-text);bac
   <main class="game-main">
     <div class="intro">
       <h2>Şansını Deneyin</h2>
-      <p>3 Ücretsiz Bira logosu ile ücretsiz bira, 3 Free Spin ile +1 ekstra hak veya 3 Hesap logosu ile %30 İndirim kazanın!</p>
+      <p>3 Bira logosu ile ücretsiz bira, 3 Free Spin ile +1 ekstra spin hakkı veya 3 Hesap logosu ile %30 İndirim kazanın!</p>
       <div class="spins-info">
         <span class="spins-left" id="spinsLeft">10 Hak Kaldı</span>
         <span class="reset-timer" id="resetTimer">Sıfırlanmaya kalan süre: --:--</span>
@@ -632,12 +633,20 @@ function finish(){
     const winSymbol = s[0];
     machine.classList.add("win"); 
     
-    // YENİ MANTIK: Sembol Bira ise özel sesi çal, yoksa normal jackpot çal
+        // YENİ MANTIK: Sembol Bira ise özel sesi çal ve konfeti patlat
     if(winSymbol === "beer"){
       play("beerWin");
+      confetti({
+        particleCount: 150,
+        spread: 90,
+        origin: { y: 0.5 },
+        colors: ['#c9a46a', '#8a5a2b', '#ffffff'], // Temana uygun renkler
+        zIndex: 2000 // Modalın üstünde çıkması için
+      });
     } else {
       play("jackpot");
     }
+
 
     let rewardText = "";
     if(winSymbol === "beer"){
