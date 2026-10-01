@@ -380,7 +380,7 @@ const reels = STRIPS.map(strip=>{
   });
   el.appendChild(st); reelsEl.appendChild(el);
   return {el, st, strip, n:strip.length, pos:Math.floor(Math.random()*strip.length),
-          spinning:false, land:null, target:0, stopAt:0, cells:[...st.children]};
+          spinning:false, land:null, target:0, stopAt:0, speed:SPEED, cells:[...st.children]};
 });
 
 let CELL = 0;
@@ -397,8 +397,10 @@ function measure(){
 new ResizeObserver(measure).observe(reelsEl);
 
 function paint(r){
-  const i = ((Math.round(r.pos) % r.n) + r.n) % r.n;
-  r.st.style.transform = `translate3d(0,${-((r.pos - 1 + r.n) * CELL)}px,0)`;
+  // Çarkın kaybolmasını engelleyen güvenli modulo işlemi
+  const p = ((r.pos % r.n) + r.n) % r.n;
+  const i = Math.round(p) % r.n;
+  r.st.style.transform = `translate3d(0,${-((p - 1 + r.n) * CELL)}px,0)`;
   if(!r.spinning) r.cells.forEach((c,k)=>c.classList.toggle("is-payline",(k % r.n)===i));
 }
 const center = r => r.strip[((Math.round(r.pos)%r.n)+r.n)%r.n];
@@ -470,7 +472,7 @@ function getCalculatedOutcome(){
   if(forced !== "auto"){
     if(forced === "beer") return "beer";
     if(forced === "free-spin") return "free-spin";
-    if(forced === "discount") return "bill"; // Artık İndirim daima HESAP (Bill) ikonunu getirecek
+    if(forced === "discount") return "bill";
     if(forced === "lose") return null;
   }
 
@@ -479,7 +481,7 @@ function getCalculatedOutcome(){
   if (rand < 1) {
     return "beer";
   } else if (rand < 1 + 2) {
-    return "bill"; // 1/300 ihtimalle %30 İndirim için HESAP ikonu
+    return "bill"; 
   } else if (rand < 3 + 3) {
     return "free-spin";
   } else {
@@ -496,18 +498,39 @@ function getTargetPositionsForOutcome(outcomeSymbol){
     });
   } else {
     let t0, t1, t2;
-    do {
+    // %30 ihtimalle ilk iki sütunu bilerek aynı yapıp heyecan faktörünü tetikliyoruz
+    if(Math.random() < 0.3) {
       t0 = Math.floor(Math.random() * reels[0].n);
-      t1 = Math.floor(Math.random() * reels[1].n);
-      t2 = Math.floor(Math.random() * reels[2].n);
-    } while(reels[0].strip[t0] === reels[1].strip[t1] && reels[1].strip[t1] === reels[2].strip[t2]);
+      const sym = reels[0].strip[t0];
+      
+      const validT1 = [];
+      reels[1].strip.forEach((s, idx) => { if(s === sym) validT1.push(idx); });
+      t1 = validT1.length > 0 ? validT1[Math.floor(Math.random() * validT1.length)] : Math.floor(Math.random() * reels[1].n);
+      
+      // 3. sütun kesinlikle farklı olacak (kaybetme durumu)
+      do {
+        t2 = Math.floor(Math.random() * reels[2].n);
+      } while(reels[2].strip[t2] === sym);
+    } else {
+      do {
+        t0 = Math.floor(Math.random() * reels[0].n);
+        t1 = Math.floor(Math.random() * reels[1].n);
+        t2 = Math.floor(Math.random() * reels[2].n);
+      } while(reels[0].strip[t0] === reels[1].strip[t1] && reels[1].strip[t1] === reels[2].strip[t2]);
+    }
     return [t0, t1, t2];
   }
 }
 
 /* ---------- SES KONTROLÜ ---------- */
-const audio={normal:new Audio("./sounds/cark-normal.mp3"),agartha:new Audio("./sounds/cark-agartha.mp3"),
-  slot3:new Audio("./sounds/slot-3.mp3"),jackpot:new Audio("./sounds/jackpot.mp3"),thud:new Audio("./sounds/thud.mp3")};
+const audio={
+  normal:new Audio("./sounds/cark-normal.mp3"),
+  agartha:new Audio("./sounds/cark-agartha.mp3"),
+  slot3:new Audio("./sounds/slot-3.mp3"),
+  jackpot:new Audio("./sounds/jackpot.mp3"),
+  thud:new Audio("./sounds/thud.mp3"),
+  suspense:new Audio("./sounds/suspense.mp3") // YENİ: Arkada çalacak gerilim müziği
+};
 audio.thud.playbackRate=3;
 const play=k=>{const a=audio[k];if(!a)return;a.currentTime=0;a.play().catch(()=>{})};
 const stopAll=()=>Object.values(audio).forEach(a=>{a.pause();a.currentTime=0});
@@ -534,12 +557,19 @@ function spin(){
   const outcomeSymbol = getCalculatedOutcome();
   const targets = getTargetPositionsForOutcome(outcomeSymbol);
 
+  // İlk iki sembol eşleşti mi kontrol et (Tease/Heyecan kontrolü)
+  const isTease = (reels[0].strip[targets[0]] === reels[1].strip[targets[1]]);
+
   const jackpot = outcomeSymbol === "logo";
   play(jackpot?"agartha":"normal");
 
-  const stops=[STOP_AT[0],STOP_AT[1],STOP_AT[2]+(jackpot?JACKPOT_EXTRA:0)];
+  // Eğer tease durumu varsa, 3. sütun çok daha uzun süre dönsün
+  const stops=[STOP_AT[0], STOP_AT[1], isTease ? STOP_AT[1] + 3500 : STOP_AT[2]+(jackpot?JACKPOT_EXTRA:0)];
+  
   reels.forEach((r,i)=>{
     r.spinning=true; r.land=null; r.stopAt=stops[i]; r.target=targets[i];
+    // Eğer tease varsa 3. çark normalden 1.8 kat daha hızlı döner
+    r.speed = (isTease && i === 2) ? SPEED * 1.8 : SPEED;
     r.cells.forEach(c=>c.classList.remove("is-payline"));
     r.el.classList.add("is-spinning");
   });
@@ -556,7 +586,7 @@ function spin(){
       allDone=false;
       const landStart=Math.max(200, r.stopAt-LAND_MS);
       if((now-t0)<landStart){
-        r.pos+=SPEED*dt;
+        r.pos += r.speed * dt; // Dinamik hıza bağlandı
         r.st.style.setProperty("--mb","1.4px");
       }else{
         if(!r.land){
@@ -575,8 +605,11 @@ function spin(){
           r.el.classList.remove("is-spinning");
           r.st.style.setProperty("--mb","0px");
           play("thud");
-          if(i===1 && center(reels[0])==="logo" && reels[1].strip[reels[1].target]==="logo"){
-            stopAll(); play("slot3");
+          
+          // 2. Çark durduğunda eğer ilk iki ikon aynıysa heyecan müziği başlar
+          if(i === 1 && isTease){
+            stopAll();
+            play("suspense");
           }
         }
       }
@@ -595,7 +628,6 @@ function finish(){
   setBusy(false);
   
   if(s[0]===s[1] && s[1]===s[2]){
-    // KAZANMA DURUMU
     const winSymbol = s[0];
     machine.classList.add("win"); play("jackpot");
 
@@ -610,20 +642,15 @@ function finish(){
       rewardText = REWARDS.discount;
     }
 
-    // Modal içeriklerini doldur
     modalIcon.src = ICON(winSymbol);
     modalIcon.alt = LABEL[winSymbol];
     modalTitle.innerText = "Tebrikler!";
     modalMessage.innerHTML = `<strong>${rewardText}</strong><br><br><span style="color:var(--agartha-muted);font-size:0.9em;">(Eşleşen Ürün: 3 × ${LABEL[winSymbol]})</span>`;
     
-    // Modal'ı göster
     winModal.classList.add("show");
-    
-    // Alttaki metin alanını boşalt
     resultEl.innerHTML = "";
 
   }else{
-    // KAYBETME DURUMU
     play("thud");
     resultEl.innerHTML=`
       <div class="result-card lose">
@@ -678,7 +705,6 @@ devToggleBtn.addEventListener("click", ()=>{
   if(devPanel.classList.contains("open")) {
     devPanel.classList.remove("open");
   } else {
-    // ŞİFRE KONTROLÜ
     const psw = prompt("Geliştirici moduna giriş için şifreyi giriniz:");
     if(psw === "aek06agartha"){
       devPanel.classList.add("open");
@@ -707,6 +733,7 @@ setInterval(updateResetTimer, 1000);
 updateResetTimer();
 initSpins();
 measure();
+
 </script>
 </body>
 </html>
