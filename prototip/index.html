@@ -636,8 +636,8 @@ function finish(){
     
         // YENİ MANTIK: Sembol Bira ise özel sesi çal ve konfeti patlat
     if(winSymbol === "beer"){
-      play("beerWin");
       play("confetti")
+      play("beerWin");
       confetti({
         particleCount: 150,
         spread: 90,
