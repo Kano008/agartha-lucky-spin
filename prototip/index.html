@@ -564,12 +564,12 @@ function spin(){
   play(jackpot?"agartha":"normal");
 
   // Eğer tease durumu varsa, 3. sütun çok daha uzun süre dönsün
-  const stops=[STOP_AT[0], STOP_AT[1], isTease ? STOP_AT[1] + 3500 : STOP_AT[2]+(jackpot?JACKPOT_EXTRA:0)];
+  const stops=[STOP_AT[0], STOP_AT[1], isTease ? STOP_AT[1] + 3000 : STOP_AT[2]+(jackpot?JACKPOT_EXTRA:0)];
   
   reels.forEach((r,i)=>{
     r.spinning=true; r.land=null; r.stopAt=stops[i]; r.target=targets[i];
     // Eğer tease varsa 3. çark normalden 1.8 kat daha hızlı döner
-    r.speed = (isTease && i === 2) ? SPEED * 1.8 : SPEED;
+    r.speed = (isTease && i === 2) ? SPEED * 2 : SPEED;
     r.cells.forEach(c=>c.classList.remove("is-payline"));
     r.el.classList.add("is-spinning");
   });
