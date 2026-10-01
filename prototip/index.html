@@ -531,7 +531,8 @@ const audio={
   jackpot:new Audio("./sounds/jackpot.mp3"),
   thud:new Audio("./sounds/thud.mp3"),
   suspense:new Audio("./sounds/suspense.mp3"),
-  beerWin:new Audio("./sounds/beerwin.mp3") // YENİ: Bira kazanınca çalacak ses
+  beerWin:new Audio("./sounds/beerwin.mp3"),
+  confetti:new Audio("./sounds/confetti.mp3")
 };
 audio.thud.playbackRate=3;
 const play=k=>{const a=audio[k];if(!a)return;a.currentTime=0;a.play().catch(()=>{})};
@@ -636,6 +637,7 @@ function finish(){
         // YENİ MANTIK: Sembol Bira ise özel sesi çal ve konfeti patlat
     if(winSymbol === "beer"){
       play("beerWin");
+      play("confetti")
       confetti({
         particleCount: 150,
         spread: 90,
