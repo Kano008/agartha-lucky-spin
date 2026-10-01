@@ -568,7 +568,7 @@ function spin(){
   
   reels.forEach((r,i)=>{
     r.spinning=true; r.land=null; r.stopAt=stops[i]; r.target=targets[i];
-    // Eğer tease varsa 3. çark normalden 1.8 kat daha hızlı döner
+    // Eğer tease varsa 3. çark normalden 2 kat daha hızlı döner
     r.speed = (isTease && i === 2) ? SPEED * 2 : SPEED;
     r.cells.forEach(c=>c.classList.remove("is-payline"));
     r.el.classList.add("is-spinning");
@@ -609,7 +609,7 @@ function spin(){
           // 2. Çark durduğunda eğer ilk iki ikon aynıysa heyecan müziği başlar
           if(i === 1 && isTease){
             stopAll();
-            play("suspense");
+            play(suspense);
           }
         }
       }
