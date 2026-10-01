@@ -529,7 +529,8 @@ const audio={
   slot3:new Audio("./sounds/slot-3.mp3"),
   jackpot:new Audio("./sounds/jackpot.mp3"),
   thud:new Audio("./sounds/thud.mp3"),
-  suspense:new Audio("./sounds/suspense.mp3") // YENİ: Arkada çalacak gerilim müziği
+  suspense:new Audio("./sounds/suspense.mp3"),
+  beerWin:new Audio("./sounds/beerwin.mp3") // YENİ: Bira kazanınca çalacak ses
 };
 audio.thud.playbackRate=3;
 const play=k=>{const a=audio[k];if(!a)return;a.currentTime=0;a.play().catch(()=>{})};
@@ -629,7 +630,14 @@ function finish(){
   
   if(s[0]===s[1] && s[1]===s[2]){
     const winSymbol = s[0];
-    machine.classList.add("win"); play("jackpot");
+    machine.classList.add("win"); 
+    
+    // YENİ MANTIK: Sembol Bira ise özel sesi çal, yoksa normal jackpot çal
+    if(winSymbol === "beer"){
+      play("beerWin");
+    } else {
+      play("jackpot");
+    }
 
     let rewardText = "";
     if(winSymbol === "beer"){
@@ -659,6 +667,7 @@ function finish(){
       </div>`;
   }
 }
+
 
 /* ---------- MODAL KAPATMA ---------- */
 modalClose.addEventListener("click", () => {
