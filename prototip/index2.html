@@ -40,7 +40,7 @@ body{margin:0;font-family:var(--agartha-body-font);color:var(--agartha-text);bac
 
 /* ==================== CABINET ==================== */
 .slot-machine{
-  width:100%;max-width:640px; /* Genişliği 4 sütun için biraz artırdık */
+  width:100%;max-width:640px; 
   background:color-mix(in srgb,var(--agartha-bg-alt) 80%,transparent);
   border:1px solid color-mix(in srgb,var(--agartha-gold) 40%,transparent);
   border-radius:4px;
@@ -257,7 +257,6 @@ body{margin:0;font-family:var(--agartha-body-font);color:var(--agartha-text);bac
   <main class="game-main">
     <div class="intro">
       <h2>Şansını Deneyin</h2>
-      <!-- 4 ürüne güncellendi -->
       <p>4 Bira logosu ile ücretsiz bira, 4 Free Spin ile +1 ekstra spin hakkı veya 4 Hesap logosu ile %30 İndirim kazanın!</p>
       <div class="spins-info">
         <span class="spins-left" id="spinsLeft">10 Hak Kaldı</span>
@@ -342,7 +341,6 @@ const modalMessage = document.getElementById("modalMessage");
 const modalClose = document.getElementById("modalClose");
 
 /* ---------- SİMGE VE SÖZLÜKLER ---------- */
-// 4 Sütun için STRIPS güncellendi
 const STRIPS = [
  "logo.bill.free-spin.vodka-energy.vodka-energy.free-spin.gin-tonic.gin-tonic.free-spin.cocktail.cocktail.free-spin.cocktail.pizza.free-spin.pizza.pizza.shot.free-spin.shot.shot.free-spin.shot.beer.free-spin.beer.beer.free-spin.beer.beer.free-spin.beer".split("."),
  "logo.bill.free-spin.bill.vodka-energy.free-spin.vodka-energy.gin-tonic.free-spin.gin-tonic.cocktail.free-spin.cocktail.cocktail.free-spin.pizza.pizza.pizza.free-spin.shot.shot.free-spin.shot.shot.free-spin.beer.beer.free-spin.beer.beer.free-spin.beer".split("."),
@@ -368,7 +366,8 @@ function preloadImages() {
 }
 preloadImages();
 
-const SPEED = 26;
+// Hız biraz artırıldı ki uzun yavaşlama süresi daha pürüzsüz olsun
+const SPEED = 36; 
 
 /* ---------- ÇARK KURULUMU ---------- */
 const reels = STRIPS.map(strip=>{
@@ -382,7 +381,7 @@ const reels = STRIPS.map(strip=>{
   });
   el.appendChild(st); reelsEl.appendChild(el);
   return {el, st, strip, n:strip.length, pos:Math.floor(Math.random()*strip.length),
-          spinning:false, land:null, target:0, stopAt:0, speed:SPEED, landMs:560, cells:[...st.children]};
+          spinning:false, land:null, target:0, stopAt:0, speed:SPEED, landMs:2500, cells:[...st.children]};
 });
 
 let CELL = 0;
@@ -461,7 +460,6 @@ function updateResetTimer(){
   if(resetTimerEl) {
     resetTimerEl.textContent = `Yenilenmeye kalan süre: ${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
   }
-  
   if(getHourStamp() !== localStorage.getItem(KEY_HOUR)){
     initSpins();
   }
@@ -501,23 +499,23 @@ function spin(){
   stopAll(); 
   setBusy(true);
 
-  // 1. Sonuç Belirleme
+  // 1. Sonuç Belirleme & İndirim Sorunu Çözümü
   const forced = devForceResult ? devForceResult.value : "auto";
   let outcome = "lose";
 
   if(forced !== "auto"){
-    outcome = forced;
+    // "discount" seçildiyse bunu doğrudan arkaplanda "bill" sembolüne çeviriyoruz.
+    outcome = forced === "discount" ? "bill" : forced;
   } else {
     const rand = Math.random() * 600;
     if (rand < 1) outcome = "beer";
-    else if (rand < 3) outcome = "bill"; // discount
+    else if (rand < 3) outcome = "bill";
     else if (rand < 6) outcome = "free-spin";
   }
 
   const isWin = ["beer", "bill", "free-spin"].includes(outcome);
   let isNearMiss = false;
 
-  // Normal kayıplarda %35 ihtimalle "ucu ucuna kaçırma" hissi tetikle
   if (outcome === "near-miss") {
     isNearMiss = true;
   } else if (!isWin && Math.random() < 0.35) {
@@ -527,18 +525,18 @@ function spin(){
   const outcomeSymbol = isWin ? outcome : null;
   let targets = [];
 
-  // 2. Rastgele ve Bağımsız Durma Zamanları (800ms - 2800ms arası)
-  const stops = reels.map(() => 800 + Math.random() * 2000);
+  // 2. Rastgele Karıştırılmış Durma Zamanları (Tamamen Bağımsız ve Uzun)
+  // İlk sütun 1 saniye sonra yavaşlamaya başlar. Sonrakiler 1 ile 1.8 sn aralıklarla tetiklenir.
+  let stopTimes = [1000]; 
+  for (let i = 1; i < 4; i++) {
+      stopTimes.push(stopTimes[i - 1] + 1000 + Math.random() * 800);
+  }
+  // Sütunların soldan sağa durma zorunluluğunu kaldırıp rastgele karıştırıyoruz
+  stopTimes.sort(() => Math.random() - 0.5);
 
-  // En son hangi çarkın duracağını bulalım
   let lastReelIdx = 0;
   let maxStop = 0;
-  stops.forEach((s, i) => { if(s > maxStop) { maxStop = s; lastReelIdx = i; } });
-
-  // Eğer ucu ucuna kaçırma (near-miss) ise en son duracak çarkı ekstra bekletelim
-  if (isNearMiss) {
-    stops[lastReelIdx] = Math.max(...stops) + 1200;
-  }
+  stopTimes.forEach((s, i) => { if(s > maxStop) { maxStop = s; lastReelIdx = i; } });
 
   // 3. Hedefleri Belirleme
   if (isWin) {
@@ -548,7 +546,6 @@ function spin(){
         return valids[Math.floor(Math.random() * valids.length)];
     });
   } else if (isNearMiss) {
-    // Kaçıyormuş hissi verecek sembolü seç
     const teaseSymbols = ["beer", "bill", "free-spin"];
     const teaseSym = teaseSymbols[Math.floor(Math.random() * teaseSymbols.length)];
 
@@ -557,10 +554,9 @@ function spin(){
         r.strip.forEach((sym, idx) => { if(sym === teaseSym) valids.push(idx); });
         let targetIdx = valids[Math.floor(Math.random() * valids.length)];
 
-        // En son duran çark için tam hedefin üstünden kayıp 1 sonraki sembolde dursun
+        // En son duran çark için hedefin üstünden kayıp 1 sonrakinde dursun
         if (i === lastReelIdx) {
             targetIdx = (targetIdx + 1) % r.n;
-            // Kaydığı sembol yanlışlıkla tekrar aynı tease sembolü olmasın diye kontrol
             while(r.strip[targetIdx] === teaseSym) {
                 targetIdx = (targetIdx + 1) % r.n;
             }
@@ -568,7 +564,6 @@ function spin(){
         return targetIdx;
     });
   } else {
-    // Normal kayıp (hepsinin aynı gelmesini engelle)
     do {
         targets = reels.map(r => Math.floor(Math.random() * r.n));
     } while (
@@ -580,15 +575,16 @@ function spin(){
 
   play(outcomeSymbol === "logo" ? "agartha" : "normal");
 
-  // Çarklara değerleri ata
   reels.forEach((r,i)=>{
-    r.spinning=true; r.land=null; r.stopAt=stops[i]; r.target=targets[i];
+    r.spinning=true; r.land=null; r.stopAt=stopTimes[i]; r.target=targets[i];
     r.speed = SPEED;
-    r.landMs = 560; // Normal durma animasyonu süresi
-
-    // Ucu ucuna kaçırmada son çark çok yavaş bir şekilde kayarak dursun
+    
+    // Normal Duruş Yavaşlama Süresi: 2.5 Saniye
+    r.landMs = 2500; 
+    
+    // Ucu Ucuna Kaçırma Yavaşlama Süresi: 4.5 Saniye (Çok uzun bir süzülme)
     if(isNearMiss && i === lastReelIdx){
-        r.landMs = 2200; // 2.2 saniye süren yavaş durma
+        r.landMs = 4500; 
     }
 
     r.cells.forEach(c=>c.classList.remove("is-payline"));
@@ -599,41 +595,56 @@ function spin(){
   const schedule=fn=>document.hidden?setTimeout(()=>fn(performance.now()),100):requestAnimationFrame(fn);
   
   function frame(now){
-    const dt=Math.min(50,now-last)/1000; last=now;
-    let allDone=true;
+    const dt = Math.min(50,now-last)/1000; last=now;
+    let allDone = true;
     let spinningCount = reels.filter(r => r.spinning).length;
 
     reels.forEach((r,i)=>{
       if(!r.spinning) return;
-      allDone=false;
-      const landStart=Math.max(200, r.stopAt - r.landMs);
+      allDone = false;
 
-      if((now-t0)<landStart){
+      // 'stopAt' süresi gelene kadar tam hızda dön
+      if((now-t0) < r.stopAt){
         r.pos += r.speed * dt;
-        r.st.style.setProperty("--mb","1.4px");
+        r.st.style.setProperty("--mb", "1.4px");
       }else{
+        // Yavaşlama evresi başlıyor
         if(!r.land){
-          const from=r.pos;
-          let dist=((r.target-from)%r.n+r.n)%r.n;
-          // landMs süresi uzadıkça yavaş kayma hissiyatını vermek için min tur sayısını artırıyoruz
-          let minRots = Math.max(2, Math.floor(r.landMs / 200));
-          while(dist < minRots) dist+=r.n;
-          r.land={from,dist,t0:(now-t0)};
+          const from = r.pos;
+          let dist = ((r.target - from) % r.n + r.n) % r.n;
+          
+          // Kusursuz Kübik Yavaşlama (Smooth Easing) için gereken matematiksel mesafe
+          const expectedDist = (r.speed * (r.landMs / 1000)) / 3; 
+          
+          // Ulaşması gereken hedefe yeterli tur ekle
+          while(dist < expectedDist - (r.n * 0.25)){
+              dist += r.n;
+          }
+          
+          // Atlayış/sekme olmaması için süreyi mesafeye göre kusursuz olarak baştan kalibre et
+          const duration = (3 * dist / r.speed) * 1000;
+          r.land = { from, dist, t0:(now-t0), duration };
         }
-        const p=Math.min(1,((now-t0)-r.land.t0)/r.landMs);
-        const e=1-Math.pow(1-p,3);
-        const bounce=p>.72?Math.sin((p-.72)/.28*Math.PI)*.16*(1-p):0;
-        r.pos=r.land.from+r.land.dist*e+bounce;
-        r.st.style.setProperty("--mb",(1.4*(1-p)).toFixed(2)+"px");
         
-        if(p>=1){
-          r.pos=r.target; r.spinning=false;
+        const p = Math.min(1, ((now-t0) - r.land.t0) / r.land.duration);
+        const e = 1 - Math.pow(1 - p, 3); // Kübik easing formülü (yavaşlayarak durma)
+        
+        // Çok yavaş durduğu için sekmeyi azalttık ki gerçekçi olsun
+        const bounce = p > 0.72 ? Math.sin((p - 0.72) / 0.28 * Math.PI) * 0.08 * (1 - p) : 0;
+        
+        r.pos = r.land.from + r.land.dist * e + bounce;
+        
+        // Hız azaldıkça motion blur'u doğal bir şekilde (kuadratik) sıfırla
+        r.st.style.setProperty("--mb", (1.4 * Math.pow(1 - p, 2)).toFixed(2) + "px");
+        
+        if(p >= 1){
+          r.pos = r.target; r.spinning = false;
           r.el.classList.remove("is-spinning");
           r.st.style.setProperty("--mb","0px");
           play("thud");
           
-          // Sadece 1 çark dönmeye devam ediyorsa (ve durum win veya near-miss ise) gerilim müziği çal
-          if(spinningCount === 2 && (isWin || isNearMiss)){
+          // Gerilim müziği (2 sütun kaldığında başlat)
+          if(spinningCount === 3 && (isWin || isNearMiss)){
             stopAll();
             play("suspense");
           }
@@ -686,7 +697,6 @@ function finish(){
     modalIcon.src = ICON(winSymbol);
     modalIcon.alt = LABEL[winSymbol];
     modalTitle.innerText = "Tebrikler!";
-    // "4 ×" olarak güncellendi
     modalMessage.innerHTML = `<strong>${rewardText}</strong><br><br><span style="color:var(--agartha-muted);font-size:0.9em;">(Eşleşen Ürün: 4 × ${LABEL[winSymbol]})</span>`;
     
     winModal.classList.add("show");
