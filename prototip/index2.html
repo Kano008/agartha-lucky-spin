@@ -1,1 +1,781 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agartha | Lucky Spin — prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap">
+<style>
+/* ---------- Agartha tokens ---------- */
+:root{
+  --agartha-bg:#0d0d0d; --agartha-bg-alt:#151515;
+  --agartha-text:#e7e1d6; --agartha-muted:#8d8579;
+  --agartha-gold:#c9a46a; --agartha-amber:#8a5a2b; --agartha-wine:#4a2323;
+  --agartha-heading-font:"Cormorant Garamond", Georgia, serif;
+  --agartha-body-font:"Inter","Segoe UI",sans-serif;
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--agartha-body-font);color:var(--agartha-text);background:#090909;-webkit-font-smoothing:antialiased}
+:where(button,a,[tabindex]):focus-visible{outline:none;border-radius:2px;
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--agartha-bg) 85%,transparent),0 0 0 4px color-mix(in srgb,var(--agartha-gold) 66%,transparent)}
 
+.game-page{min-height:100dvh;display:flex;flex-direction:column;
+  background:radial-gradient(circle at 50% 30%,#8a5a2b26,transparent 60%),var(--agartha-bg)}
+.top-bar{padding:1.5rem;text-align:center;border-bottom:1px solid color-mix(in srgb,var(--agartha-gold) 25%,transparent);position:relative}
+.top-bar-lead{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+.home-link{color:var(--agartha-muted);letter-spacing:.12em;text-transform:uppercase;font-size:.75rem;text-decoration:none}
+.home-link:hover{color:var(--agartha-gold)}
+.page-title{font-family:var(--agartha-heading-font);letter-spacing:.1em;color:var(--agartha-gold);text-transform:uppercase;margin:0;font-size:1.75rem;font-weight:500}
+.game-main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.75rem;padding:2rem 1.5rem}
+.intro{text-align:center;max-width:420px}
+.intro h2{font-family:var(--agartha-heading-font);font-size:2.2rem;font-weight:500;margin:0 0 .5rem}
+.intro p{color:var(--agartha-muted);margin:0;line-height:1.5;font-size:.92rem}
+.spins-info{margin-top:1rem;display:flex;flex-direction:column;gap:.25rem;align-items:center}
+.spins-left{font-size:.8rem;letter-spacing:.19em;text-transform:uppercase;color:var(--agartha-gold);font-weight:600}
+.reset-timer{font-size:.7rem;color:var(--agartha-muted);letter-spacing:.08em}
+
+/* ==================== CABINET ==================== */
+.slot-machine{
+  width:100%;max-width:640px; /* Genişliği 4 sütun için biraz artırdık */
+  background:color-mix(in srgb,var(--agartha-bg-alt) 80%,transparent);
+  border:1px solid color-mix(in srgb,var(--agartha-gold) 40%,transparent);
+  border-radius:4px;
+  padding:1.5rem;box-shadow:0 12px 40px #00000080;
+}
+.cabinet{display:flex;align-items:stretch;gap:1rem}
+
+/* ---------- reels ---------- */
+.reels-container{
+  flex:1;min-width:0;position:relative;
+  background:#050505;
+  border:1px solid color-mix(in srgb,var(--agartha-gold) 20%,transparent);
+  border-radius:4px;padding:.85rem;
+  display:flex;gap:.5rem;
+  box-shadow:inset 0 8px 16px #000c;
+}
+.reels-container::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:5;border-radius:4px;
+  background:linear-gradient(112deg,#ffffff07 0%,#0000 34%,#0000 72%,#ffffff05 100%)}
+.reel{
+  flex:1;min-width:0;position:relative;overflow:hidden;
+  aspect-ratio:1 / 3;
+  background:#101010;
+  border:1px solid color-mix(in srgb,var(--agartha-gold) 12%,transparent);
+  border-radius:3px;box-shadow:inset 0 0 26px #000a;
+}
+.reel::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:3;
+  background:linear-gradient(#050505e0 0%,#05050526 13%,#0000 30%,#0000 70%,#05050526 87%,#050505e0 100%)}
+.strip{position:absolute;left:0;right:0;top:0;will-change:transform;filter:blur(var(--mb,0px))}
+.cell{display:flex;align-items:center;justify-content:center}
+.cell img{width:64%;max-width:5rem;object-fit:contain;display:block;user-select:none;pointer-events:none;
+  opacity:.42;filter:grayscale(.5) brightness(.78);
+  transition:opacity .34s var(--ease),filter .34s var(--ease),transform .34s var(--ease)}
+.cell.is-payline img{opacity:1;filter:none;transform:scale(1.26)}
+.reel.is-spinning .cell img{opacity:.66;filter:grayscale(.28) brightness(.88);transform:none;transition:none}
+
+/* payline */
+.payline{position:absolute;left:0;right:0;top:50%;height:var(--payh,33%);transform:translateY(-50%);pointer-events:none;z-index:4}
+.payline::before,.payline::after{content:"";position:absolute;left:.5rem;right:.5rem;height:1px;
+  background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--agartha-gold) 62%,transparent) 16%,
+    color-mix(in srgb,var(--agartha-gold) 62%,transparent) 84%,transparent);
+  transition:background .4s var(--ease),box-shadow .4s var(--ease)}
+.payline::before{top:0} .payline::after{bottom:0}
+.notch{position:absolute;top:50%;width:0;height:0;transform:translateY(-50%);
+  border-top:5px solid transparent;border-bottom:5px solid transparent}
+.notch.l{left:1px;border-left:6px solid color-mix(in srgb,var(--agartha-gold) 78%,transparent)}
+.notch.r{right:1px;border-right:6px solid color-mix(in srgb,var(--agartha-gold) 78%,transparent)}
+.slot-machine.win .payline::before,.slot-machine.win .payline::after{
+  background:linear-gradient(90deg,transparent,var(--agartha-gold) 12%,var(--agartha-gold) 88%,transparent);
+  box-shadow:0 0 16px color-mix(in srgb,var(--agartha-gold) 50%,transparent);
+  animation:payglow 1.1s ease-in-out 3}
+@keyframes payglow{50%{opacity:.4}}
+
+/* ==================== LEVER ==================== */
+.lever{
+  --pull:0; --hover:0;
+  position:relative;width:62px;flex:none;
+  background:none;border:0;padding:0;margin:0;
+  cursor:grab;touch-action:none;-webkit-tap-highlight-color:transparent;display:block;
+}
+.lever:active{cursor:grabbing}
+.lever.ready:hover{--hover:.09}
+
+.lever-base{position:absolute;left:50%;bottom:0;transform:translateX(-50%);
+  width:44px;height:40px;border-radius:3px;
+  background:linear-gradient(#201d19,#0b0a09);
+  border:1px solid color-mix(in srgb,var(--agartha-gold) 32%,transparent);
+  box-shadow:inset 0 2px 5px #ffffff0f,0 8px 18px #000000ad;z-index:2}
+.lever-base::after{content:"";position:absolute;left:50%;top:8px;transform:translateX(-50%);
+  width:16px;height:16px;border-radius:50%;
+  background:radial-gradient(circle at 40% 32%,#413b31,#080808 70%);
+  border:1px solid #00000094;box-shadow:inset 0 2px 3px #000000b3}
+
+.lever-track{position:absolute;left:50%;transform:translateX(-50%);
+  top:40%;bottom:36px;width:8px;border-radius:999px;
+  background:linear-gradient(#00000000,#00000073);
+  border-left:1px solid #ffffff0d;border-right:1px solid #00000078}
+
+.lever-arm{position:absolute;left:50%;bottom:22px;width:13px;height:54%;
+  transform-origin:50% 100%;z-index:3;
+  transform:translateX(-50%)
+            rotate(calc((var(--pull) + var(--hover)) * 30deg))
+            scaleY(calc(1 - (var(--pull) + var(--hover)) * .26));
+  transition:transform .62s var(--ease)}
+.lever.dragging .lever-arm{transition:none}
+.lever.snapping .lever-arm{transition:transform .8s cubic-bezier(.34,1.56,.64,1)}
+.shaft{position:absolute;inset:0;border-radius:999px;
+  background:linear-gradient(90deg,#211e19,#7b756a 30%,#e7e1d6 50%,#5f594f 72%,#141210);
+  box-shadow:0 3px 10px #000000ad}
+.shaft::after{content:"";position:absolute;left:0;right:0;bottom:0;height:16px;border-radius:999px;
+  background:linear-gradient(#0000,#0a0908)}
+.knob{position:absolute;left:50%;top:0;transform:translate(-50%,-58%);
+  width:38px;height:38px;border-radius:50%;
+  background:radial-gradient(circle at 33% 27%,#f7e6c4,var(--agartha-gold) 40%,var(--agartha-amber) 76%,#341f0d);
+  border:1px solid color-mix(in srgb,var(--agartha-gold) 72%,transparent);
+  box-shadow:0 0 0 3px #0b0a09,0 8px 20px #000000bf,0 0 20px color-mix(in srgb,var(--agartha-gold) 30%,transparent)}
+.knob::after{content:"";position:absolute;left:21%;top:15%;width:28%;height:21%;border-radius:50%;
+  background:#fff8e6;opacity:.6;filter:blur(1.5px)}
+.lever.ready .knob{animation:breathe 2.8s ease-in-out infinite}
+@keyframes breathe{50%{box-shadow:0 0 0 3px #0b0a09,0 8px 20px #000000bf,
+  0 0 34px color-mix(in srgb,var(--agartha-gold) 60%,transparent)}}
+.lever[disabled]{cursor:not-allowed}
+.lever[disabled] .knob{animation:none}
+.lever.spent .knob{filter:grayscale(.8) brightness(.5)}
+.lever.spent .shaft{filter:grayscale(1) brightness(.45)}
+
+.lever-caption{margin:.9rem 0 0;text-align:center;
+  font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--agartha-muted);
+  transition:color .3s var(--ease)}
+.slot-machine.armed .lever-caption{color:var(--agartha-gold)}
+
+/* ---------- RESULT (KAYBETME DURUMU İÇİN) ---------- */
+.result-area{width:100%;max-width:640px;min-height:96px;display:flex;align-items:center;justify-content:center}
+.result-card{width:100%;text-align:center;padding:1.25rem;border-radius:4px}
+.result-card h3{font-family:var(--agartha-heading-font);margin:0 0 .35rem;font-size:1.5rem;font-weight:600}
+.result-card p{color:var(--agartha-muted);margin:0;font-size:.92rem}
+.result-card.lose{background:#ffffff0d;border:1px solid #ffffff1a}
+
+/* ==================== WIN POP-UP (MODAL) ==================== */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.85); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s var(--ease);
+}
+.modal-overlay.show {
+  opacity: 1; pointer-events: auto;
+}
+.modal-content {
+  background: linear-gradient(135deg, #151515, #0d0d0d);
+  border: 1px solid var(--agartha-gold);
+  padding: 2.5rem 2rem; border-radius: 8px;
+  text-align: center; max-width: 400px; width: 90%;
+  transform: scale(0.9) translateY(20px);
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.9), 0 0 40px rgba(201,164,106,0.15);
+}
+.modal-overlay.show .modal-content {
+  transform: scale(1) translateY(0);
+}
+.modal-content img {
+  width: 90px; height: 90px; object-fit: contain;
+  margin: 0 auto 1.25rem; display: block;
+  filter: drop-shadow(0 0 15px color-mix(in srgb, var(--agartha-gold) 50%, transparent));
+}
+.modal-content h2 {
+  font-family: var(--agartha-heading-font); color: var(--agartha-gold);
+  margin: 0 0 1rem; font-size: 2.2rem;
+}
+.modal-content p {
+  color: var(--agartha-text); margin: 0 0 2rem; font-size: 1.1rem; line-height: 1.5;
+}
+.modal-btn {
+  background: var(--agartha-gold); color: #0d0d0d;
+  border: none; padding: 0.8rem 2.5rem; font-size: 1.05rem; font-weight: 600;
+  border-radius: 4px; cursor: pointer; transition: all 0.2s; font-family: var(--agartha-body-font);
+}
+.modal-btn:hover {
+  background: #e3c48e; box-shadow: 0 0 15px rgba(201,164,106,0.4);
+}
+
+/* ==================== DEVELOPER PANEL ==================== */
+.dev-toggle-btn{
+  position:absolute;right:1rem;top:1.5rem;
+  background:rgba(201, 164, 106, 0.15);
+  border:1px solid var(--agartha-gold);
+  color:var(--agartha-gold);
+  font-size:.75rem;padding:.35rem .75rem;border-radius:4px;
+  cursor:pointer;transition:all .2s ease;
+}
+.dev-toggle-btn:hover{background:var(--agartha-gold);color:#000}
+.dev-panel{
+  display:none;width:100%;max-width:640px;
+  background:#121212;border:1px dashed var(--agartha-gold);
+  border-radius:4px;padding:1rem;margin-top:1rem;
+  font-size:.82rem;color:var(--agartha-text);
+}
+.dev-panel.open{display:block}
+.dev-panel h4{margin:0 0 .75rem;color:var(--agartha-gold);font-size:1rem;text-transform:uppercase;letter-spacing:.05em}
+.dev-group{margin-bottom:.75rem;display:flex;flex-direction:column;gap:.35rem}
+.dev-group label{color:var(--agartha-muted);font-size:.78rem}
+.dev-group select, .dev-group button{
+  background:#202020;border:1px solid #333;color:var(--agartha-text);
+  padding:.4rem .6rem;border-radius:3px;font-size:.8rem;cursor:pointer;
+}
+.dev-group button:hover{border-color:var(--agartha-gold);color:var(--agartha-gold)}
+.dev-row{display:flex;gap:.5rem;align-items:center}
+
+@media (max-width:680px){
+  .slot-machine{padding:1rem}
+  .cabinet{gap:.65rem}
+  .reels-container{padding:.6rem;gap:.35rem}
+  .lever{width:48px}
+  .lever-base{width:34px;height:32px}
+  .lever-base::after{width:12px;height:12px;top:6px}
+  .lever-arm{width:10px;bottom:18px;height:52%}
+  .knob{width:30px;height:30px}
+  .intro h2{font-size:1.8rem}
+  .dev-toggle-btn{position:static;margin-top:.5rem;display:inline-block}
+}
+</style>
+</head>
+<body>
+<div class="game-page">
+  <header class="top-bar">
+    <div class="top-bar-lead">
+      <a class="home-link" href="#">&larr; Home</a>
+      <span class="home-link">TR / EN</span>
+    </div>
+    <h1 class="page-title">Lucky Spin</h1>
+    <button class="dev-toggle-btn" id="devToggleBtn">🛠️ Dev Mode</button>
+  </header>
+
+  <main class="game-main">
+    <div class="intro">
+      <h2>Şansını Deneyin</h2>
+      <!-- 4 ürüne güncellendi -->
+      <p>4 Bira logosu ile ücretsiz bira, 4 Free Spin ile +1 ekstra spin hakkı veya 4 Hesap logosu ile %30 İndirim kazanın!</p>
+      <div class="spins-info">
+        <span class="spins-left" id="spinsLeft">10 Hak Kaldı</span>
+        <span class="reset-timer" id="resetTimer">Sıfırlanmaya kalan süre: --:--</span>
+      </div>
+    </div>
+
+    <div class="slot-machine armed" id="machine">
+      <div class="cabinet">
+        <div class="reels-container" id="reels">
+          <div class="payline" id="payline"><span class="notch l"></span><span class="notch r"></span></div>
+        </div>
+        <button class="lever ready" id="lever" aria-label="Pull the lever to spin">
+          <span class="lever-track"></span>
+          <span class="lever-arm" id="leverArm"><span class="shaft"></span><span class="knob"></span></span>
+          <span class="lever-base"></span>
+        </button>
+      </div>
+      <p class="lever-caption" id="caption">Kolu Çekin</p>
+    </div>
+
+    <div class="result-area" id="result"></div>
+
+    <!-- WIN POP-UP (MODAL) -->
+    <div class="modal-overlay" id="winModal">
+      <div class="modal-content">
+        <img id="modalIcon" src="" alt="">
+        <h2 id="modalTitle">Tebrikler!</h2>
+        <p id="modalMessage">Kazanılan ödül detayı...</p>
+        <button class="modal-btn" id="modalClose">Harika!</button>
+      </div>
+    </div>
+
+    <!-- DEVELOPER TEST PANEL -->
+    <div class="dev-panel" id="devPanel">
+      <h4>🛠️ Developer Test Modu</h4>
+      <div class="dev-group">
+        <label>
+          <input type="checkbox" id="devBypassLimit"> Sınırsız Hak / Süre Engelini Kaldır
+        </label>
+      </div>
+      <div class="dev-group">
+        <label>Sonraki Spin Sonucunu Zorla (Test):</label>
+        <select id="devForceResult">
+          <option value="auto">Otomatik Oransal (1/600 Bira, 1/300 İndirim, 1/200 Free Spin)</option>
+          <option value="beer">Zorla: Ücretsiz Bira (1/600)</option>
+          <option value="discount">Zorla: %30 İndirim (Hesap - 1/300)</option>
+          <option value="free-spin">Zorla: Free Spin (1/200)</option>
+          <option value="near-miss">Zorla: Ucu Ucuna Kaybet (Near Miss)</option>
+          <option value="lose">Zorla: Tamamen Kaybet</option>
+        </select>
+      </div>
+      <div class="dev-row">
+        <button id="devResetSpinsBtn">Hakları 10 Yap</button>
+        <button id="devClearStorageBtn">Tüm Hafızayı Sıfırla</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ---------- DOM ELEMANLARI ---------- */
+const machine = document.getElementById("machine");
+const lever = document.getElementById("lever");
+const reelsEl = document.getElementById("reels");
+const resultEl = document.getElementById("result");
+const caption = document.getElementById("caption");
+const spinsEl = document.getElementById("spinsLeft");
+const resetTimerEl = document.getElementById("resetTimer");
+
+const devToggleBtn = document.getElementById("devToggleBtn");
+const devPanel = document.getElementById("devPanel");
+const devBypassLimit = document.getElementById("devBypassLimit");
+const devForceResult = document.getElementById("devForceResult");
+const devResetSpinsBtn = document.getElementById("devResetSpinsBtn");
+const devClearStorageBtn = document.getElementById("devClearStorageBtn");
+
+const winModal = document.getElementById("winModal");
+const modalIcon = document.getElementById("modalIcon");
+const modalTitle = document.getElementById("modalTitle");
+const modalMessage = document.getElementById("modalMessage");
+const modalClose = document.getElementById("modalClose");
+
+/* ---------- SİMGE VE SÖZLÜKLER ---------- */
+// 4 Sütun için STRIPS güncellendi
+const STRIPS = [
+ "logo.bill.free-spin.vodka-energy.vodka-energy.free-spin.gin-tonic.gin-tonic.free-spin.cocktail.cocktail.free-spin.cocktail.pizza.free-spin.pizza.pizza.shot.free-spin.shot.shot.free-spin.shot.beer.free-spin.beer.beer.free-spin.beer.beer.free-spin.beer".split("."),
+ "logo.bill.free-spin.bill.vodka-energy.free-spin.vodka-energy.gin-tonic.free-spin.gin-tonic.cocktail.free-spin.cocktail.cocktail.free-spin.pizza.pizza.pizza.free-spin.shot.shot.free-spin.shot.shot.free-spin.beer.beer.free-spin.beer.beer.free-spin.beer".split("."),
+ "logo.bill.free-spin.vodka-energy.vodka-energy.free-spin.gin-tonic.gin-tonic.free-spin.cocktail.cocktail.free-spin.cocktail.pizza.free-spin.pizza.pizza.pizza.free-spin.shot.shot.free-spin.shot.shot.free-spin.beer.beer.free-spin.beer.beer.free-spin.beer".split("."),
+ "logo.bill.free-spin.bill.vodka-energy.free-spin.vodka-energy.gin-tonic.free-spin.gin-tonic.cocktail.free-spin.cocktail.cocktail.free-spin.pizza.pizza.pizza.free-spin.shot.shot.free-spin.shot.shot.free-spin.beer.beer.free-spin.beer.beer.free-spin.beer".split(".")
+];
+const ICON = id => `./drinks/${id}.png`;
+const LABEL = {logo:"Agartha",bill:"Hesap",beer:"Bira",shot:"Shot",cocktail:"Kokteyl",
+  pizza:"Pizza","vodka-energy":"Vodka & Energy","gin-tonic":"Gin & Tonic","free-spin":"Free Spin"};
+
+const REWARDS = {
+  beer: "Ücretsiz Bira Kazandınız!",
+  "free-spin": "+1 Ekstra Spin Kazandınız!",
+  discount: "Tüm İçecek/Yiyeceklerde %30 İndirim Kazandınız!"
+};
+
+/* ---------- IMAGE PRELOAD ---------- */
+function preloadImages() {
+  Object.keys(LABEL).forEach(id => {
+    const img = new Image();
+    img.src = ICON(id);
+  });
+}
+preloadImages();
+
+const SPEED = 26;
+
+/* ---------- ÇARK KURULUMU ---------- */
+const reels = STRIPS.map(strip=>{
+  const el = document.createElement("div"); el.className = "reel";
+  const st = document.createElement("div"); st.className = "strip";
+  for(let c=0;c<3;c++) strip.forEach(id=>{
+    const cell = document.createElement("div"); cell.className = "cell";
+    const img = document.createElement("img");
+    img.src = ICON(id); img.alt = LABEL[id]; img.draggable = false;
+    cell.appendChild(img); st.appendChild(cell);
+  });
+  el.appendChild(st); reelsEl.appendChild(el);
+  return {el, st, strip, n:strip.length, pos:Math.floor(Math.random()*strip.length),
+          spinning:false, land:null, target:0, stopAt:0, speed:SPEED, landMs:560, cells:[...st.children]};
+});
+
+let CELL = 0;
+function measure(){
+  CELL = reels[0].el.clientHeight / 3;
+  if(!CELL) return;
+  reels.forEach(r=>{
+    r.cells.forEach(c=>{c.style.height = CELL+"px"});
+    r.st.style.height = (CELL*r.n*3)+"px";
+  });
+  document.getElementById("payline").style.setProperty("--payh", CELL+"px");
+  reels.forEach(paint);
+}
+new ResizeObserver(measure).observe(reelsEl);
+
+function paint(r){
+  const p = ((r.pos % r.n) + r.n) % r.n;
+  const i = Math.round(p) % r.n;
+  r.st.style.transform = `translate3d(0,${-((p - 1 + r.n) * CELL)}px,0)`;
+  if(!r.spinning) r.cells.forEach((c,k)=>c.classList.toggle("is-payline",(k % r.n)===i));
+}
+const center = r => r.strip[((Math.round(r.pos)%r.n)+r.n)%r.n];
+
+/* ---------- SAAT BAŞI HAK & LOCALSTORAGE ---------- */
+const HOURLY_LIMIT = 10;
+const KEY_SPINS = "agartha_spins_left";
+const KEY_HOUR = "agartha_hour_stamp";
+
+let spinsLeft = HOURLY_LIMIT;
+let running = false;
+
+function getHourStamp(){
+  const now = new Date();
+  return `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}-${now.getHours()}`;
+}
+
+function updateUI(){
+  if(!spinsEl || !lever || !machine || !caption) return;
+  spinsEl.textContent = `${spinsLeft} Hak Kaldı`;
+  const isBypass = devBypassLimit ? devBypassLimit.checked : false;
+  const canSpin = (spinsLeft > 0 || isBypass) && !running;
+  
+  lever.disabled = !canSpin;
+  lever.classList.toggle("ready", canSpin);
+  lever.classList.toggle("spent", !canSpin);
+  machine.classList.toggle("armed", canSpin);
+  caption.textContent = running ? "Dönüyor…" : (canSpin ? "Kolu Çekin" : "Hakkınız Bitti (Saat Başı Yenilenir)");
+}
+
+function initSpins(){
+  const currentStamp = getHourStamp();
+  const savedStamp = localStorage.getItem(KEY_HOUR);
+  
+  if(savedStamp !== currentStamp){
+    localStorage.setItem(KEY_HOUR, currentStamp);
+    localStorage.setItem(KEY_SPINS, HOURLY_LIMIT);
+    spinsLeft = HOURLY_LIMIT;
+  } else {
+    const savedSpins = localStorage.getItem(KEY_SPINS);
+    spinsLeft = savedSpins !== null ? parseInt(savedSpins, 10) : HOURLY_LIMIT;
+  }
+  updateUI();
+}
+
+function saveSpins(){
+  localStorage.setItem(KEY_SPINS, spinsLeft);
+  updateUI();
+}
+
+function updateResetTimer(){
+  const now = new Date();
+  const nextHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1, 0, 0);
+  const diff = Math.max(0, nextHour - now);
+  const mins = Math.floor(diff / 60000);
+  const secs = Math.floor((diff % 60000) / 1000);
+  if(resetTimerEl) {
+    resetTimerEl.textContent = `Yenilenmeye kalan süre: ${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+  }
+  
+  if(getHourStamp() !== localStorage.getItem(KEY_HOUR)){
+    initSpins();
+  }
+}
+
+/* ---------- SES KONTROLÜ ---------- */
+const audio={
+  normal:new Audio("./sounds/cark-normal.mp3"),
+  agartha:new Audio("./sounds/cark-agartha.mp3"),
+  jackpot:new Audio("./sounds/jackpot.mp3"),
+  thud:new Audio("./sounds/thud.mp3"),
+  suspense:new Audio("./sounds/suspense.mp3"),
+  beerWin:new Audio("./sounds/beerwin.mp3"),
+  confetti:new Audio("./sounds/confetti.mp3")
+};
+audio.thud.playbackRate=3;
+const play=k=>{const a=audio[k];if(!a)return;a.currentTime=0;a.play().catch(()=>{})};
+const stopAll=()=>Object.values(audio).forEach(a=>{a.pause();a.currentTime=0});
+
+function setBusy(b){
+  running=b;
+  updateUI();
+}
+
+/* ---------- ANA SPİN (DÖNÜŞ) MOTORU ---------- */
+function spin(){
+  const isBypass = devBypassLimit ? devBypassLimit.checked : false;
+  if(running || (spinsLeft <= 0 && !isBypass)) return;
+  
+  if(!isBypass) {
+    spinsLeft--;
+    saveSpins();
+  }
+
+  machine.classList.remove("win"); 
+  resultEl.innerHTML=""; 
+  stopAll(); 
+  setBusy(true);
+
+  // 1. Sonuç Belirleme
+  const forced = devForceResult ? devForceResult.value : "auto";
+  let outcome = "lose";
+
+  if(forced !== "auto"){
+    outcome = forced;
+  } else {
+    const rand = Math.random() * 600;
+    if (rand < 1) outcome = "beer";
+    else if (rand < 3) outcome = "bill"; // discount
+    else if (rand < 6) outcome = "free-spin";
+  }
+
+  const isWin = ["beer", "bill", "free-spin"].includes(outcome);
+  let isNearMiss = false;
+
+  // Normal kayıplarda %35 ihtimalle "ucu ucuna kaçırma" hissi tetikle
+  if (outcome === "near-miss") {
+    isNearMiss = true;
+  } else if (!isWin && Math.random() < 0.35) {
+    isNearMiss = true;
+  }
+
+  const outcomeSymbol = isWin ? outcome : null;
+  let targets = [];
+
+  // 2. Rastgele ve Bağımsız Durma Zamanları (800ms - 2800ms arası)
+  const stops = reels.map(() => 800 + Math.random() * 2000);
+
+  // En son hangi çarkın duracağını bulalım
+  let lastReelIdx = 0;
+  let maxStop = 0;
+  stops.forEach((s, i) => { if(s > maxStop) { maxStop = s; lastReelIdx = i; } });
+
+  // Eğer ucu ucuna kaçırma (near-miss) ise en son duracak çarkı ekstra bekletelim
+  if (isNearMiss) {
+    stops[lastReelIdx] = Math.max(...stops) + 1200;
+  }
+
+  // 3. Hedefleri Belirleme
+  if (isWin) {
+    targets = reels.map(r => {
+        const valids = [];
+        r.strip.forEach((sym, idx) => { if(sym === outcomeSymbol) valids.push(idx); });
+        return valids[Math.floor(Math.random() * valids.length)];
+    });
+  } else if (isNearMiss) {
+    // Kaçıyormuş hissi verecek sembolü seç
+    const teaseSymbols = ["beer", "bill", "free-spin"];
+    const teaseSym = teaseSymbols[Math.floor(Math.random() * teaseSymbols.length)];
+
+    targets = reels.map((r, i) => {
+        const valids = [];
+        r.strip.forEach((sym, idx) => { if(sym === teaseSym) valids.push(idx); });
+        let targetIdx = valids[Math.floor(Math.random() * valids.length)];
+
+        // En son duran çark için tam hedefin üstünden kayıp 1 sonraki sembolde dursun
+        if (i === lastReelIdx) {
+            targetIdx = (targetIdx + 1) % r.n;
+            // Kaydığı sembol yanlışlıkla tekrar aynı tease sembolü olmasın diye kontrol
+            while(r.strip[targetIdx] === teaseSym) {
+                targetIdx = (targetIdx + 1) % r.n;
+            }
+        }
+        return targetIdx;
+    });
+  } else {
+    // Normal kayıp (hepsinin aynı gelmesini engelle)
+    do {
+        targets = reels.map(r => Math.floor(Math.random() * r.n));
+    } while (
+        reels[0].strip[targets[0]] === reels[1].strip[targets[1]] &&
+        reels[1].strip[targets[1]] === reels[2].strip[targets[2]] &&
+        reels[2].strip[targets[2]] === reels[3].strip[targets[3]]
+    );
+  }
+
+  play(outcomeSymbol === "logo" ? "agartha" : "normal");
+
+  // Çarklara değerleri ata
+  reels.forEach((r,i)=>{
+    r.spinning=true; r.land=null; r.stopAt=stops[i]; r.target=targets[i];
+    r.speed = SPEED;
+    r.landMs = 560; // Normal durma animasyonu süresi
+
+    // Ucu ucuna kaçırmada son çark çok yavaş bir şekilde kayarak dursun
+    if(isNearMiss && i === lastReelIdx){
+        r.landMs = 2200; // 2.2 saniye süren yavaş durma
+    }
+
+    r.cells.forEach(c=>c.classList.remove("is-payline"));
+    r.el.classList.add("is-spinning");
+  });
+
+  const t0=performance.now(); let last=t0;
+  const schedule=fn=>document.hidden?setTimeout(()=>fn(performance.now()),100):requestAnimationFrame(fn);
+  
+  function frame(now){
+    const dt=Math.min(50,now-last)/1000; last=now;
+    let allDone=true;
+    let spinningCount = reels.filter(r => r.spinning).length;
+
+    reels.forEach((r,i)=>{
+      if(!r.spinning) return;
+      allDone=false;
+      const landStart=Math.max(200, r.stopAt - r.landMs);
+
+      if((now-t0)<landStart){
+        r.pos += r.speed * dt;
+        r.st.style.setProperty("--mb","1.4px");
+      }else{
+        if(!r.land){
+          const from=r.pos;
+          let dist=((r.target-from)%r.n+r.n)%r.n;
+          // landMs süresi uzadıkça yavaş kayma hissiyatını vermek için min tur sayısını artırıyoruz
+          let minRots = Math.max(2, Math.floor(r.landMs / 200));
+          while(dist < minRots) dist+=r.n;
+          r.land={from,dist,t0:(now-t0)};
+        }
+        const p=Math.min(1,((now-t0)-r.land.t0)/r.landMs);
+        const e=1-Math.pow(1-p,3);
+        const bounce=p>.72?Math.sin((p-.72)/.28*Math.PI)*.16*(1-p):0;
+        r.pos=r.land.from+r.land.dist*e+bounce;
+        r.st.style.setProperty("--mb",(1.4*(1-p)).toFixed(2)+"px");
+        
+        if(p>=1){
+          r.pos=r.target; r.spinning=false;
+          r.el.classList.remove("is-spinning");
+          r.st.style.setProperty("--mb","0px");
+          play("thud");
+          
+          // Sadece 1 çark dönmeye devam ediyorsa (ve durum win veya near-miss ise) gerilim müziği çal
+          if(spinningCount === 2 && (isWin || isNearMiss)){
+            stopAll();
+            play("suspense");
+          }
+        }
+      }
+      paint(r);
+    });
+
+    if(allDone){ finish(); return; }
+    schedule(frame);
+  }
+  schedule(frame);
+}
+
+function finish(){
+  stopAll();
+  const s=reels.map(center);
+  setBusy(false);
+  
+  // 4 Çarkın da eşleştiği kazanma durumu
+  if(s[0]===s[1] && s[1]===s[2] && s[2]===s[3]){
+    const winSymbol = s[0];
+    machine.classList.add("win"); 
+    
+    if(winSymbol === "beer"){
+      play("confetti")
+      play("beerWin");
+      confetti({
+        particleCount: 150,
+        spread: 90,
+        origin: { y: 0.5 },
+        colors: ['#c9a46a', '#8a5a2b', '#ffffff'],
+        zIndex: 2000
+      });
+    } else {
+      play("jackpot");
+    }
+
+    let rewardText = "";
+    if(winSymbol === "beer"){
+      rewardText = REWARDS.beer;
+    } else if(winSymbol === "free-spin"){
+      rewardText = REWARDS["free-spin"];
+      spinsLeft++;
+      saveSpins();
+    } else {
+      rewardText = REWARDS.discount;
+    }
+
+    modalIcon.src = ICON(winSymbol);
+    modalIcon.alt = LABEL[winSymbol];
+    modalTitle.innerText = "Tebrikler!";
+    // "4 ×" olarak güncellendi
+    modalMessage.innerHTML = `<strong>${rewardText}</strong><br><br><span style="color:var(--agartha-muted);font-size:0.9em;">(Eşleşen Ürün: 4 × ${LABEL[winSymbol]})</span>`;
+    
+    winModal.classList.add("show");
+    resultEl.innerHTML = "";
+
+  }else{
+    play("thud");
+    resultEl.innerHTML=`
+      <div class="result-card lose">
+        <h3>Tekrar Deneyin</h3>
+        <p>${s.map(x=>LABEL[x]).join(" · ")}</p>
+      </div>`;
+  }
+}
+
+/* ---------- MODAL KAPATMA ---------- */
+modalClose.addEventListener("click", () => {
+  winModal.classList.remove("show");
+});
+
+/* ---------- LEVER INTERACTION ---------- */
+let drag=null;
+const MAX_PULL=90;
+const setPull=v=>lever.style.setProperty("--pull",Math.max(0,Math.min(1,v)));
+
+function release(fire){
+  lever.classList.remove("dragging");
+  lever.classList.add("snapping");
+  setPull(0);
+  setTimeout(()=>lever.classList.remove("snapping"),820);
+  if(fire) spin();
+}
+function pullAndFire(){
+  lever.classList.add("snapping"); setPull(1);
+  setTimeout(()=>release(true),140);
+}
+
+lever.addEventListener("pointerdown",e=>{
+  if(lever.disabled) return;
+  lever.setPointerCapture(e.pointerId);
+  lever.classList.add("dragging");
+  drag={y:e.clientY};
+});
+lever.addEventListener("pointermove",e=>{
+  if(!drag) return;
+  const v=(e.clientY-drag.y)/MAX_PULL;
+  setPull(v);
+  if(v>=.85){ drag=null; release(true); }
+});
+lever.addEventListener("pointerup",()=>{ if(drag){drag=null; pullAndFire();} });
+lever.addEventListener("pointercancel",()=>{ if(drag){drag=null; release(false);} });
+lever.addEventListener("keydown",e=>{
+  if(e.key===" "||e.key==="Enter"){ e.preventDefault(); if(!lever.disabled) pullAndFire(); }
+});
+
+/* ---------- DEVELOPER PANEL INTERACTION ---------- */
+devToggleBtn.addEventListener("click", ()=>{
+  if(devPanel.classList.contains("open")) {
+    devPanel.classList.remove("open");
+  } else {
+    const psw = prompt("Geliştirici moduna giriş için şifreyi giriniz:");
+    if(psw === "aek06agartha"){
+      devPanel.classList.add("open");
+    } else if(psw !== null) {
+      alert("Hatalı şifre!");
+    }
+  }
+});
+
+devBypassLimit.addEventListener("change", updateUI);
+
+devResetSpinsBtn.addEventListener("click", ()=>{
+  spinsLeft = HOURLY_LIMIT;
+  saveSpins();
+  alert("Haklar 10 olarak yenilendi!");
+});
+
+devClearStorageBtn.addEventListener("click", ()=>{
+  localStorage.clear();
+  initSpins();
+  alert("LocalStorage temizlendi!");
+});
+
+/* ---------- BAŞLANGIÇ ÇALIŞTIRMA ---------- */
+setInterval(updateResetTimer, 1000);
+updateResetTimer();
+initSpins();
+measure();
+
+</script>
+</body>
+</html>
