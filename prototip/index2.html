@@ -470,15 +470,23 @@ const audio={
   agartha:new Audio("./sounds/cark-agartha.mp3"),
   jackpot:new Audio("./sounds/jackpot.mp3"),
   thud:new Audio("./sounds/thud.mp3"),
-  suspense:new Audio("./sounds/suspense.mp3"),
+  // suspense:new Audio("./sounds/suspense.mp3"), // Şimdilik yorum satırında
   beerWin:new Audio("./sounds/beerwin.mp3"),
   confetti:new Audio("./sounds/confetti.mp3")
 };
 
-// Çarklar dönerken seslerin kesilmemesi için döngü (loop) aktif edildi
-audio.normal.loop = true;
-audio.agartha.loop = true;
-audio.suspense.loop = true;
+// Tarayıcı boşluğunu engellemek için JS ile zorla loop yaptırıyoruz
+function makeSeamlessLoop(audioObj, buffer = 0.2) {
+  audioObj.addEventListener('timeupdate', function() {
+    if (this.currentTime > this.duration - buffer) {
+      this.currentTime = 0;
+      this.play();
+    }
+  });
+}
+makeSeamlessLoop(audio.normal);
+makeSeamlessLoop(audio.agartha);
+// makeSeamlessLoop(audio.suspense); // Şimdilik yorum satırında
 
 audio.thud.playbackRate=3;
 const play=k=>{const a=audio[k];if(!a)return;a.currentTime=0;a.play().catch(()=>{})};
@@ -628,10 +636,10 @@ function spin(){
           r.st.style.setProperty("--mb","0px");
           play("thud");
           
-          if(spinningCount === 3 && (isWin || isNearMiss)){
-            stopAll();
-            play("suspense");
-          }
+          // if(spinningCount === 3 && (isWin || isNearMiss)){
+          //   stopAll();
+          //   play("suspense"); // Şimdilik yorum satırında
+          // }
         }
       }
       paint(r);
@@ -644,7 +652,7 @@ function spin(){
 }
 
 function finish(){
-  stopAll(); // Tüm dönen sesleri susturur
+  stopAll(); 
   const s=reels.map(center);
   setBusy(false);
   
