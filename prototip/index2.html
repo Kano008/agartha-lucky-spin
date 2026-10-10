@@ -464,33 +464,80 @@ function updateResetTimer(){
   }
 }
 
-/* ---------- SES KONTROLÜ ---------- */
-const audio={
-  normal:new Audio("./sounds/cark-normal.mp3"),
-  agartha:new Audio("./sounds/cark-agartha.mp3"),
+
+/* ---------- SES KONTROLÜ (WEB AUDIO API İLE KUSURSUZ LOOP) ---------- */
+// Tek seferlik sesler (HTML5 Audio)
+const audio_oneshot = {
   jackpot:new Audio("./sounds/jackpot.mp3"),
   thud:new Audio("./sounds/thud.mp3"),
-  // suspense:new Audio("./sounds/suspense.mp3"), // Şimdilik yorum satırında
   beerWin:new Audio("./sounds/beerwin.mp3"),
   confetti:new Audio("./sounds/confetti.mp3")
 };
+audio_oneshot.thud.playbackRate = 3;
 
-// Tarayıcı boşluğunu engellemek için JS ile zorla loop yaptırıyoruz
-function makeSeamlessLoop(audioObj, buffer = 0.2) {
-  audioObj.addEventListener('timeupdate', function() {
-    if (this.currentTime > this.duration - buffer) {
-      this.currentTime = 0;
-      this.play();
+// Döngü Sesleri (Web Audio API)
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const audioBuffers = {};
+const loopingSources = {};
+
+// Sesi fetch edip memory'ye decode ediyoruz (Tam sıfır boşluk için)
+async function loadSeamlessAudio(key, url) {
+  try {
+    const response = await fetch(url);
+    const arrayBuffer = await response.arrayBuffer();
+    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    audioBuffers[key] = audioBuffer;
+  } catch(e) {
+    console.error("Ses yükleme hatası:", e);
+  }
+}
+
+// Oyun başlarken sesleri belleğe al
+loadSeamlessAudio("normal", "./sounds/cark-normal.mp3");
+loadSeamlessAudio("agartha", "./sounds/cark-agartha.mp3");
+// loadSeamlessAudio("suspense", "./sounds/suspense.mp3"); // Şimdilik yorum satırında
+
+function playSeamless(key) {
+  if(!audioBuffers[key]) return; // Yüklenmediyse çalma
+  if(loopingSources[key]) return; // Zaten çalıyorsa başlatma
+
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+
+  const source = audioCtx.createBufferSource();
+  source.buffer = audioBuffers[key];
+  source.loop = true; // Web Audio API'de loop tam kusursuzdur (sıfır milisaniye boşluk)
+  source.connect(audioCtx.destination);
+  source.start();
+  loopingSources[key] = source;
+}
+
+function stopAllSeamless() {
+  Object.keys(loopingSources).forEach(key => {
+    if(loopingSources[key]) {
+      loopingSources[key].stop();
+      loopingSources[key].disconnect();
+      loopingSources[key] = null;
     }
   });
 }
-makeSeamlessLoop(audio.normal);
-makeSeamlessLoop(audio.agartha);
-// makeSeamlessLoop(audio.suspense); // Şimdilik yorum satırında
 
-audio.thud.playbackRate=3;
-const play=k=>{const a=audio[k];if(!a)return;a.currentTime=0;a.play().catch(()=>{})};
-const stopAll=()=>Object.values(audio).forEach(a=>{a.pause();a.currentTime=0});
+function play(key) {
+  // Eğer çağrılan ses Web Audio API (Döngü) sistemindeyse
+  if (key === "normal" || key === "agartha" || key === "suspense") {
+    playSeamless(key);
+  } 
+  // Değilse standart tek seferlik ses
+  else if (audio_oneshot[key]) {
+    const a = audio_oneshot[key];
+    a.currentTime = 0;
+    a.play().catch(()=>{});
+  }
+}
+
+function stopAll() {
+  stopAllSeamless();
+  Object.values(audio_oneshot).forEach(a => { a.pause(); a.currentTime = 0; });
+}
 
 function setBusy(b){
   running=b;
@@ -506,6 +553,9 @@ function spin(){
     spinsLeft--;
     saveSpins();
   }
+
+  // Tarayıcı güvenlik kısıtlamaları gereği ilk etkileşimde AudioContext uyandırılır
+  if(audioCtx.state === 'suspended') audioCtx.resume();
 
   machine.classList.remove("win"); 
   resultEl.innerHTML=""; 
