@@ -1,0 +1,1247 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agartha | Lucky Spin — prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap">
+<style>
+/* ---------- Agartha tokens ---------- */
+:root{
+  --agartha-bg:#0d0d0d; --agartha-bg-alt:#151515;
+  --agartha-text:#e7e1d6; --agartha-muted:#8d8579;
+  --agartha-gold:#c9a46a; --agartha-amber:#8a5a2b; --agartha-wine:#4a2323;
+  --agartha-heading-font:"Cormorant Garamond", Georgia, serif;
+  --agartha-body-font:"Inter","Segoe UI",sans-serif;
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--agartha-body-font);color:var(--agartha-text);background:#090909;-webkit-font-smoothing:antialiased}
+:where(button,a,[tabindex]):focus-visible{outline:none;border-radius:2px;
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--agartha-bg) 85%,transparent),0 0 0 4px color-mix(in srgb,var(--agartha-gold) 66%,transparent)}
+
+.game-page{min-height:100dvh;display:flex;flex-direction:column;
+  background:radial-gradient(circle at 50% 30%,#8a5a2b26,transparent 60%),var(--agartha-bg)}
+.top-bar{padding:1.5rem;text-align:center;border-bottom:1px solid color-mix(in srgb,var(--agartha-gold) 25%,transparent);position:relative}
+.top-bar-lead{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+.home-link{color:var(--agartha-muted);letter-spacing:.12em;text-transform:uppercase;font-size:.75rem;text-decoration:none}
+.home-link:hover{color:var(--agartha-gold)}
+
+/* ses aç/kapa (home-link ile aynı dil) */
+.sound-toggle{background:none;border:0;padding:0;cursor:pointer;font-family:inherit;
+  color:var(--agartha-muted);letter-spacing:.12em;text-transform:uppercase;font-size:.75rem}
+.sound-toggle:hover,.sound-toggle[aria-pressed="true"]{color:var(--agartha-gold)}
+
+.page-title{font-family:var(--agartha-heading-font);letter-spacing:.1em;color:var(--agartha-gold);text-transform:uppercase;margin:0;font-size:1.75rem;font-weight:500}
+.game-main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.75rem;padding:2rem 1.5rem}
+.intro{text-align:center;max-width:420px}
+.intro h2{font-family:var(--agartha-heading-font);font-size:2.2rem;font-weight:500;margin:0 0 .5rem}
+.intro p{color:var(--agartha-muted);margin:0;line-height:1.5;font-size:.92rem}
+.intro p.lines-note{margin-top:.65rem;font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;
+  color:color-mix(in srgb,var(--agartha-gold) 80%,transparent)}
+.spins-info{margin-top:1rem;display:flex;flex-direction:column;gap:.25rem;align-items:center}
+.spins-left{font-size:.8rem;letter-spacing:.19em;text-transform:uppercase;color:var(--agartha-gold);font-weight:600}
+.reset-timer{font-size:.7rem;color:var(--agartha-muted);letter-spacing:.08em}
+
+/* ==================== CABINET ==================== */
+.slot-machine{
+  width:100%;max-width:640px; 
+  background:color-mix(in srgb,var(--agartha-bg-alt) 80%,transparent);
+  border:1px solid color-mix(in srgb,var(--agartha-gold) 40%,transparent);
+  border-radius:4px;
+  padding:1.5rem;box-shadow:0 12px 40px #00000080;
+}
+/* gerilim anı: son makara yavaşlarken kabin altın renkte nefes alır */
+.slot-machine.tense{animation:tense 1s ease-in-out infinite}
+@keyframes tense{50%{
+  border-color:color-mix(in srgb,var(--agartha-gold) 90%,transparent);
+  box-shadow:0 12px 40px #00000080,0 0 38px color-mix(in srgb,var(--agartha-gold) 32%,transparent)}}
+@media (prefers-reduced-motion:reduce){.slot-machine.tense{animation:none}}
+
+.cabinet{display:flex;align-items:stretch;gap:1rem}
+
+/* ---------- reels ---------- */
+.reels-container{
+  flex:1;min-width:0;position:relative;
+  background:#050505;
+  border:1px solid color-mix(in srgb,var(--agartha-gold) 20%,transparent);
+  border-radius:4px;padding:.85rem;
+  display:flex;gap:.5rem;
+  box-shadow:inset 0 8px 16px #000c;
+}
+.reels-container::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:5;border-radius:4px;
+  background:linear-gradient(112deg,#ffffff07 0%,#0000 34%,#0000 72%,#ffffff05 100%)}
+.reel{
+  flex:1;min-width:0;position:relative;overflow:hidden;
+  aspect-ratio:1 / 3;
+  /* 3 satırı ayıran çok ince çizgiler: 4x3 ızgara hissi */
+  background:
+    linear-gradient(#ffffff0d,#ffffff0d) 0 33.333%/100% 1px no-repeat,
+    linear-gradient(#ffffff0d,#ffffff0d) 0 66.666%/100% 1px no-repeat,
+    #101010;
+  border:1px solid color-mix(in srgb,var(--agartha-gold) 12%,transparent);
+  border-radius:3px;box-shadow:inset 0 0 26px #000a;
+}
+/* üst/alt kenar gölgesi: artık 3 satırın hepsi oyunda, o yüzden hafif */
+.reel::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:3;
+  background:linear-gradient(#05050590 0%,#05050500 9%,#0000 91%,#05050590 100%)}
+.strip{position:absolute;left:0;right:0;top:0;will-change:transform;filter:blur(var(--mb,0px))}
+.cell{display:flex;align-items:center;justify-content:center}
+.cell img{width:64%;max-width:5rem;object-fit:contain;display:block;user-select:none;pointer-events:none;
+  opacity:.42;filter:grayscale(.5) brightness(.78);
+  transition:opacity .34s var(--ease),filter .34s var(--ease),transform .34s var(--ease)}
+/* durmuş makaranın görünen 3 hücresi (artık hepsi geçerli) */
+.cell.is-shown img{opacity:.9;filter:none}
+.reel.is-spinning .cell img{opacity:.66;filter:grayscale(.28) brightness(.88);transform:none;transition:none}
+/* kazanınca: kazanmayan hücreler geri çekilir, kazananlar parlar */
+.slot-machine.win .cell.is-shown:not(.is-win) img{opacity:.3;filter:grayscale(.6) brightness(.6)}
+.cell.is-win img{opacity:1;transform:scale(1.2);
+  filter:brightness(1.28) saturate(1.12) drop-shadow(0 0 10px color-mix(in srgb,var(--agartha-gold) 75%,transparent));
+  animation:winpulse 1.1s ease-in-out infinite}
+@keyframes winpulse{
+  0%,100%{transform:scale(1.16);
+    filter:brightness(1.2) saturate(1.1) drop-shadow(0 0 8px color-mix(in srgb,var(--agartha-gold) 65%,transparent))}
+  50%{transform:scale(1.25);
+    filter:brightness(1.45) saturate(1.18) drop-shadow(0 0 18px var(--agartha-gold))}}
+@media (prefers-reduced-motion:reduce){.cell.is-win img{animation:none}}
+
+/* kazanan çizgi: hücrelerin üzerinden geçen altın çizgi (SVG) */
+.win-lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:6;overflow:visible}
+.win-line{fill:none;stroke:color-mix(in srgb,var(--agartha-gold) 90%,#fff);stroke-width:2.5;
+  stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:var(--len);stroke-dashoffset:var(--len);
+  filter:drop-shadow(0 0 5px color-mix(in srgb,var(--agartha-gold) 80%,transparent));
+  animation:drawline .7s var(--ease) .1s forwards}
+@keyframes drawline{to{stroke-dashoffset:0}}
+@media (prefers-reduced-motion:reduce){.win-line{animation:none;stroke-dashoffset:0}}
+
+/* ==================== LEVER ==================== */
+.lever{
+  --pull:0; --hover:0;
+  position:relative;width:62px;flex:none;
+  background:none;border:0;padding:0;margin:0;
+  cursor:grab;touch-action:none;-webkit-tap-highlight-color:transparent;display:block;
+}
+.lever:active{cursor:grabbing}
+.lever.ready:hover{--hover:.09}
+
+.lever-base{position:absolute;left:50%;bottom:0;transform:translateX(-50%);
+  width:44px;height:40px;border-radius:3px;
+  background:linear-gradient(#201d19,#0b0a09);
+  border:1px solid color-mix(in srgb,var(--agartha-gold) 32%,transparent);
+  box-shadow:inset 0 2px 5px #ffffff0f,0 8px 18px #000000ad;z-index:2}
+.lever-base::after{content:"";position:absolute;left:50%;top:8px;transform:translateX(-50%);
+  width:16px;height:16px;border-radius:50%;
+  background:radial-gradient(circle at 40% 32%,#413b31,#080808 70%);
+  border:1px solid #00000094;box-shadow:inset 0 2px 3px #000000b3}
+
+.lever-track{position:absolute;left:50%;transform:translateX(-50%);
+  top:40%;bottom:36px;width:8px;border-radius:999px;
+  background:linear-gradient(#00000000,#00000073);
+  border-left:1px solid #ffffff0d;border-right:1px solid #00000078}
+
+.lever-arm{position:absolute;left:50%;bottom:22px;width:13px;height:54%;
+  transform-origin:50% 100%;z-index:3;
+  transform:translateX(-50%)
+            rotate(calc((var(--pull) + var(--hover)) * 30deg))
+            scaleY(calc(1 - (var(--pull) + var(--hover)) * .26));
+  transition:transform .62s var(--ease)}
+.lever.dragging .lever-arm{transition:none}
+.lever.snapping .lever-arm{transition:transform .8s cubic-bezier(.34,1.56,.64,1)}
+.shaft{position:absolute;inset:0;border-radius:999px;
+  background:linear-gradient(90deg,#211e19,#7b756a 30%,#e7e1d6 50%,#5f594f 72%,#141210);
+  box-shadow:0 3px 10px #000000ad}
+.shaft::after{content:"";position:absolute;left:0;right:0;bottom:0;height:16px;border-radius:999px;
+  background:linear-gradient(#0000,#0a0908)}
+.knob{position:absolute;left:50%;top:0;transform:translate(-50%,-58%);
+  width:38px;height:38px;border-radius:50%;
+  background:radial-gradient(circle at 33% 27%,#f7e6c4,var(--agartha-gold) 40%,var(--agartha-amber) 76%,#341f0d);
+  border:1px solid color-mix(in srgb,var(--agartha-gold) 72%,transparent);
+  box-shadow:0 0 0 3px #0b0a09,0 8px 20px #000000bf,0 0 20px color-mix(in srgb,var(--agartha-gold) 30%,transparent)}
+.knob::after{content:"";position:absolute;left:21%;top:15%;width:28%;height:21%;border-radius:50%;
+  background:#fff8e6;opacity:.6;filter:blur(1.5px)}
+.lever.ready .knob{animation:breathe 2.8s ease-in-out infinite}
+@keyframes breathe{50%{box-shadow:0 0 0 3px #0b0a09,0 8px 20px #000000bf,
+  0 0 34px color-mix(in srgb,var(--agartha-gold) 60%,transparent)}}
+.lever[disabled]{cursor:not-allowed}
+.lever[disabled] .knob{animation:none}
+.lever.spent .knob{filter:grayscale(.8) brightness(.5)}
+.lever.spent .shaft{filter:grayscale(1) brightness(.45)}
+
+.lever-caption{margin:.9rem 0 0;text-align:center;
+  font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--agartha-muted);
+  transition:color .3s var(--ease)}
+.slot-machine.armed .lever-caption{color:var(--agartha-gold)}
+
+/* ---------- RESULT (KAYBETME DURUMU İÇİN) ---------- */
+.result-area{width:100%;max-width:640px;min-height:96px;display:flex;align-items:center;justify-content:center}
+.result-card{width:100%;text-align:center;padding:1.25rem;border-radius:4px}
+.result-card h3{font-family:var(--agartha-heading-font);margin:0 0 .35rem;font-size:1.5rem;font-weight:600}
+.result-card p{color:var(--agartha-muted);margin:0;font-size:.92rem}
+.result-card.lose{background:#ffffff0d;border:1px solid #ffffff1a}
+
+/* ==================== WIN POP-UP (MODAL) ==================== */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.85); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s var(--ease);
+}
+.modal-overlay.show {
+  opacity: 1; pointer-events: auto;
+}
+.modal-content {
+  background: linear-gradient(135deg, #151515, #0d0d0d);
+  border: 1px solid var(--agartha-gold);
+  padding: 2.5rem 2rem; border-radius: 8px;
+  text-align: center; max-width: 400px; width: 90%;
+  transform: scale(0.9) translateY(20px);
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.9), 0 0 40px rgba(201,164,106,0.15);
+}
+.modal-overlay.show .modal-content {
+  transform: scale(1) translateY(0);
+}
+.modal-content img {
+  width: 90px; height: 90px; object-fit: contain;
+  margin: 0 auto 1.25rem; display: block;
+  filter: drop-shadow(0 0 15px color-mix(in srgb, var(--agartha-gold) 50%, transparent));
+}
+.modal-content h2 {
+  font-family: var(--agartha-heading-font); color: var(--agartha-gold);
+  margin: 0 0 1rem; font-size: 2.2rem;
+}
+.modal-content p {
+  color: var(--agartha-text); margin: 0 0 2rem; font-size: 1.1rem; line-height: 1.5;
+}
+.modal-btn {
+  background: var(--agartha-gold); color: #0d0d0d;
+  border: none; padding: 0.8rem 2.5rem; font-size: 1.05rem; font-weight: 600;
+  border-radius: 4px; cursor: pointer; transition: all 0.2s; font-family: var(--agartha-body-font);
+}
+.modal-btn:hover {
+  background: #e3c48e; box-shadow: 0 0 15px rgba(201,164,106,0.4);
+}
+
+/* ==================== DEVELOPER PANEL ==================== */
+.dev-toggle-btn{
+  position:absolute;right:1rem;top:1.5rem;
+  background:rgba(201, 164, 106, 0.15);
+  border:1px solid var(--agartha-gold);
+  color:var(--agartha-gold);
+  font-size:.75rem;padding:.35rem .75rem;border-radius:4px;
+  cursor:pointer;transition:all .2s ease;
+}
+.dev-toggle-btn:hover{background:var(--agartha-gold);color:#000}
+.dev-panel{
+  display:none;width:100%;max-width:640px;
+  background:#121212;border:1px dashed var(--agartha-gold);
+  border-radius:4px;padding:1rem;margin-top:1rem;
+  font-size:.82rem;color:var(--agartha-text);
+}
+.dev-panel.open{display:block}
+.dev-panel h4{margin:0 0 .75rem;color:var(--agartha-gold);font-size:1rem;text-transform:uppercase;letter-spacing:.05em}
+.dev-group{margin-bottom:.75rem;display:flex;flex-direction:column;gap:.35rem}
+.dev-group label{color:var(--agartha-muted);font-size:.78rem}
+.dev-group select, .dev-group button{
+  background:#202020;border:1px solid #333;color:var(--agartha-text);
+  padding:.4rem .6rem;border-radius:3px;font-size:.8rem;cursor:pointer;
+}
+.dev-group button:hover{border-color:var(--agartha-gold);color:var(--agartha-gold)}
+.dev-row{display:flex;gap:.5rem;align-items:center}
+
+/* ses testi: hangi dosya yüklendi, hangisi eksik */
+.sound-test{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.4rem}
+.sound-test button{text-align:left}
+.sound-test button.missing{opacity:.45;cursor:not-allowed}
+.sound-test button.on{border-color:var(--agartha-gold);color:var(--agartha-gold)}
+
+@media (max-width:680px){
+  .slot-machine{padding:1rem}
+  .cabinet{gap:.65rem}
+  .reels-container{padding:.6rem;gap:.35rem}
+  .lever{width:48px}
+  .lever-base{width:34px;height:32px}
+  .lever-base::after{width:12px;height:12px;top:6px}
+  .lever-arm{width:10px;bottom:18px;height:52%}
+  .knob{width:30px;height:30px}
+  .intro h2{font-size:1.8rem}
+  .dev-toggle-btn{position:static;margin-top:.5rem;display:inline-block}
+}
+</style>
+</head>
+<body>
+<div class="game-page">
+  <header class="top-bar">
+    <div class="top-bar-lead">
+      <a class="home-link" href="#">&larr; Home</a>
+      <button class="sound-toggle" id="soundToggle" type="button" aria-pressed="true">🔊 Ses açık</button>
+      <span class="home-link">TR / EN</span>
+    </div>
+    <h1 class="page-title">Lucky Spin</h1>
+    <button class="dev-toggle-btn" id="devToggleBtn">🛠️ Dev Mode</button>
+  </header>
+
+  <main class="game-main">
+    <div class="intro">
+      <h2>Şansını Deneyin</h2>
+      <p>Bir kazanç çizgisinde 4 Bira logosu ile ücretsiz bira, 4 Free Spin ile +1 ekstra spin hakkı veya 4 Hesap logosu ile %30 İndirim kazanın!</p>
+      <p class="lines-note">5 kazanç çizgisi: 3 yatay satır · U · ∩</p>
+      <div class="spins-info">
+        <span class="spins-left" id="spinsLeft">10 Hak Kaldı</span>
+        <span class="reset-timer" id="resetTimer">Sıfırlanmaya kalan süre: --:--</span>
+      </div>
+    </div>
+
+    <div class="slot-machine armed" id="machine">
+      <div class="cabinet">
+        <div class="reels-container" id="reels">
+          <svg class="win-lines" id="winLines" aria-hidden="true"></svg>
+        </div>
+        <button class="lever ready" id="lever" aria-label="Pull the lever to spin">
+          <span class="lever-track"></span>
+          <span class="lever-arm" id="leverArm"><span class="shaft"></span><span class="knob"></span></span>
+          <span class="lever-base"></span>
+        </button>
+      </div>
+      <p class="lever-caption" id="caption">Kolu Çekin</p>
+    </div>
+
+    <div class="result-area" id="result"></div>
+
+    <!-- WIN POP-UP (MODAL) -->
+    <div class="modal-overlay" id="winModal">
+      <div class="modal-content">
+        <img id="modalIcon" src="" alt="">
+        <h2 id="modalTitle">Tebrikler!</h2>
+        <p id="modalMessage">Kazanılan ödül detayı...</p>
+        <button class="modal-btn" id="modalClose">Harika!</button>
+      </div>
+    </div>
+
+    <!-- DEVELOPER TEST PANEL -->
+    <div class="dev-panel" id="devPanel">
+      <h4>🛠️ Developer Test Modu</h4>
+      <div class="dev-group">
+        <label>
+          <input type="checkbox" id="devBypassLimit"> Sınırsız Hak / Süre Engelini Kaldır
+        </label>
+      </div>
+      <div class="dev-group">
+        <label>Sonraki Spin Sonucunu Zorla (Test):</label>
+        <select id="devForceResult">
+          <option value="auto">Otomatik Oransal (1/600 Bira, 1/300 İndirim, 1/200 Free Spin)</option>
+          <option value="beer">Zorla: Ücretsiz Bira (1/600)</option>
+          <option value="discount">Zorla: %30 İndirim (Hesap - 1/300)</option>
+          <option value="free-spin">Zorla: Free Spin (1/200)</option>
+          <option value="near-miss">Zorla: Ucu Ucuna Kaybet (Near Miss)</option>
+          <option value="lose">Zorla: Tamamen Kaybet</option>
+        </select>
+      </div>
+      <div class="dev-group">
+        <label>Kazanç / near miss çizgisi (zorla testlerinde ve rastgele kazançlarda):</label>
+        <select id="devForceLine">
+          <option value="auto">Rastgele çizgi</option>
+          <option value="mid">Orta satır</option>
+          <option value="top">Üst satır</option>
+          <option value="bottom">Alt satır</option>
+          <option value="valley">U çizgisi</option>
+          <option value="arch">∩ çizgisi</option>
+        </select>
+      </div>
+      <div class="dev-group">
+        <label>Ses testi (✔ yüklendi · ✖ dosya yok · ⟳ döngü, tekrar tıkla = durdur):</label>
+        <div class="sound-test" id="soundTest"></div>
+      </div>
+      <div class="dev-row">
+        <button id="devResetSpinsBtn">Hakları 10 Yap</button>
+        <button id="devClearStorageBtn">Tüm Hafızayı Sıfırla</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ---------- DOM ELEMANLARI ---------- */
+const machine = document.getElementById("machine");
+const lever = document.getElementById("lever");
+const reelsEl = document.getElementById("reels");
+const winLinesEl = document.getElementById("winLines");
+const resultEl = document.getElementById("result");
+const caption = document.getElementById("caption");
+const spinsEl = document.getElementById("spinsLeft");
+const resetTimerEl = document.getElementById("resetTimer");
+
+const devToggleBtn = document.getElementById("devToggleBtn");
+const devPanel = document.getElementById("devPanel");
+const devBypassLimit = document.getElementById("devBypassLimit");
+const devForceResult = document.getElementById("devForceResult");
+const devForceLine = document.getElementById("devForceLine");
+const devResetSpinsBtn = document.getElementById("devResetSpinsBtn");
+const devClearStorageBtn = document.getElementById("devClearStorageBtn");
+const soundTestEl = document.getElementById("soundTest");
+const soundToggle = document.getElementById("soundToggle");
+
+const winModal = document.getElementById("winModal");
+const modalIcon = document.getElementById("modalIcon");
+const modalTitle = document.getElementById("modalTitle");
+const modalMessage = document.getElementById("modalMessage");
+const modalClose = document.getElementById("modalClose");
+
+/* ---------- SİMGE VE SÖZLÜKLER ---------- */
+const STRIPS = [
+ "logo.bill.free-spin.vodka-energy.vodka-energy.free-spin.gin-tonic.gin-tonic.free-spin.cocktail.cocktail.free-spin.cocktail.pizza.free-spin.pizza.pizza.shot.free-spin.shot.shot.free-spin.shot.beer.free-spin.beer.beer.free-spin.beer.beer.free-spin.beer".split("."),
+ "logo.bill.free-spin.bill.vodka-energy.free-spin.vodka-energy.gin-tonic.free-spin.gin-tonic.cocktail.free-spin.cocktail.cocktail.free-spin.pizza.pizza.pizza.free-spin.shot.shot.free-spin.shot.shot.free-spin.beer.beer.free-spin.beer.beer.free-spin.beer".split("."),
+ "logo.bill.free-spin.vodka-energy.vodka-energy.free-spin.gin-tonic.gin-tonic.free-spin.cocktail.cocktail.free-spin.cocktail.pizza.free-spin.pizza.pizza.pizza.free-spin.shot.shot.free-spin.shot.shot.free-spin.beer.beer.free-spin.beer.beer.free-spin.beer".split("."),
+ "logo.bill.free-spin.bill.vodka-energy.free-spin.vodka-energy.gin-tonic.free-spin.gin-tonic.cocktail.free-spin.cocktail.cocktail.free-spin.pizza.pizza.pizza.free-spin.shot.shot.free-spin.shot.shot.free-spin.beer.beer.free-spin.beer.beer.free-spin.beer".split(".")
+];
+const ICON = id => `./drinks/${id}.png`;
+const LABEL = {logo:"Agartha",bill:"Hesap",beer:"Bira",shot:"Shot",cocktail:"Kokteyl",
+  pizza:"Pizza","vodka-energy":"Vodka & Energy","gin-tonic":"Gin & Tonic","free-spin":"Free Spin"};
+
+const REWARDS = {
+  beer: "Ücretsiz Bira Kazandınız!",
+  "free-spin": "+1 Ekstra Spin Kazandınız!",
+  discount: "Tüm İçecek/Yiyeceklerde %30 İndirim Kazandınız!"
+};
+
+/* ---------- AYARLAR ---------- */
+// Değer sırası (en değerli başta). Birden fazla ödül aynı anda görünürse en değerlisi sayılır.
+const PRIZE_SYMBOLS = ["beer", "bill", "free-spin"];
+// Gerilim sesi/animasyonu ve "ucu ucuna" mesajı sadece değerli ödüllerde çalışır.
+// (Free Spin şeritte çok sık geldiği için ekranda 3'lü Free Spin zaten sık görünür;
+//  hepsini "gerilim" yapsaydık efekt özelliğini kaybederdi.)
+const TENSION_SYMBOLS = ["beer", "bill"];
+// "Ucu ucuna" görünümünü yapay olarak üretme oranı (sadece kaybeden spinlerde).
+// Rastgele makaralar zaten kendiliğinden bazen 3/4 eşleşme üretiyor.
+const NEAR_MISS_RATE = 0.05;
+// Kazanınca kazanan hücrelerin ve çizginin görünmesi için modal gecikmesi (ms)
+const WIN_MODAL_DELAY = 1300;
+
+/* =====================================================================
+   KAZANÇ MANTIĞI (saf fonksiyonlar, ekrana dokunmaz)
+   ---------------------------------------------------------------------
+   Izgara 4 makara x 3 satır. Her makaranın "idx" değeri ORTA satırdaki
+   simgenin şerit indeksi. Üst satır = idx-1, alt satır = idx+1.
+   Kazanç çizgileri (satır: 0 üst, 1 orta, 2 alt), soldan sağa 4 makara:
+   ===================================================================== */
+/* ===== LOGIC-BEGIN ===== */
+const PAYLINES = [
+  { id:"mid",    name:"Orta satır", rows:[1,1,1,1] },
+  { id:"top",    name:"Üst satır",  rows:[0,0,0,0] },
+  { id:"bottom", name:"Alt satır",  rows:[2,2,2,2] },
+  { id:"valley", name:"U çizgisi",  rows:[0,1,1,0] },
+  { id:"arch",   name:"∩ çizgisi",  rows:[2,1,1,2] }
+];
+const rand = n => Math.floor(Math.random() * n);
+const pick = arr => arr[rand(arr.length)];
+
+// makara i, merkez indeks idx, satır row -> o hücredeki simge
+function symAt(i, idx, row){
+  const s = STRIPS[i], n = s.length;
+  return s[(((idx + row - 1) % n) + n) % n];
+}
+
+// 4 hücresi de aynı olan tüm çizgiler (simge türü fark etmez)
+function winningLines(idxs){
+  return PAYLINES.map(line => {
+    const syms = line.rows.map((row, i) => symAt(i, idxs[i], row));
+    return syms.every(x => x === syms[0]) ? { line, symbol: syms[0] } : null;
+  }).filter(Boolean);
+}
+
+// makara i'de, 'row' satırında 'symbol' görünsün diye kullanılabilecek merkez indeksler
+function idxOptions(i, row, symbol){
+  const s = STRIPS[i], n = s.length, out = [];
+  s.forEach((sym, k) => { if(sym === symbol) out.push((((k - (row - 1)) % n) + n) % n); });
+  return out;
+}
+
+const linePool = forcedId =>
+  (forcedId && forcedId !== "auto") ? PAYLINES.filter(l => l.id === forcedId) : PAYLINES;
+
+// KAZANÇ ızgarası: seçilen çizgide 4 aynı simge; başka hiçbir çizgi kazanmasın
+function buildWinTargets(symbol, forcedLine){
+  let last = null;
+  for(let attempt = 0; attempt < 400; attempt++){
+    const line = pick(linePool(forcedLine));
+    const idxs = line.rows.map((row, i) => pick(idxOptions(i, row, symbol)));
+    last = { idxs, line };
+    const wins = winningLines(idxs);
+    const strict = attempt < 300;   // önce "tek kazanan çizgi" ara, olmazsa gevşet
+    if(wins.length && wins.every(w => w.symbol === symbol) && (!strict || wins.length === 1)) return last;
+  }
+  return last;
+}
+
+// KAYIP ızgarası: hiçbir çizgide (hiçbir simgeyle) 4'lü eşleşme olmasın
+function buildLoseTargets(){
+  for(let a = 0; a < 500; a++){
+    const idxs = STRIPS.map(s => rand(s.length));
+    if(winningLines(idxs).length === 0) return idxs;
+  }
+  return STRIPS.map(s => rand(s.length));
+}
+
+// NEAR MISS ızgarası: bir çizgide 3 aynı ödül simgesi, 4. (en son duran) makarada ıskalama
+function buildNearMissTargets(missReel, tease, forcedLine){
+  for(let a = 0; a < 500; a++){
+    const line = pick(linePool(forcedLine));
+    const idxs = line.rows.map((row, i) => {
+      if(i !== missReel) return pick(idxOptions(i, row, tease));
+      const n = STRIPS[i].length, all = [], close = [];
+      for(let c = 0; c < n; c++){
+        if(symAt(i, c, row) === tease) continue;
+        all.push(c);
+        // tercih: aranan simge çizginin hemen üstünde/altında kalsın ("kıl payı")
+        if([0, 1, 2].some(rw => rw !== row && symAt(i, c, rw) === tease)) close.push(c);
+      }
+      return pick(close.length ? close : all);
+    });
+    if(winningLines(idxs).length === 0) return { idxs, line };
+  }
+  return { idxs: buildLoseTargets(), line: null };
+}
+
+// 3 makara durduğunda: bir çizgide bu 3 makaranın hücreleri AYNI ödül simgesi mi?
+// settled = [{i, idx}, ...]  -> varsa o simge (en değerli), yoksa null
+function tensionSymbol(settled){
+  const found = new Set();
+  PAYLINES.forEach(line => {
+    const syms = settled.map(({ i, idx }) => symAt(i, idx, line.rows[i]));
+    if(syms.every(x => x === syms[0]) && TENSION_SYMBOLS.includes(syms[0])) found.add(syms[0]);
+  });
+  return TENSION_SYMBOLS.find(s => found.has(s)) || null;
+}
+/* ===== LOGIC-END ===== */
+
+/* ---------- IMAGE PRELOAD ---------- */
+function preloadImages() {
+  Object.keys(LABEL).forEach(id => {
+    const img = new Image();
+    img.src = ICON(id);
+  });
+}
+preloadImages();
+
+const SPEED = 36; 
+
+/* ---------- ÇARK KURULUMU ---------- */
+const reels = STRIPS.map(strip=>{
+  const el = document.createElement("div"); el.className = "reel";
+  const st = document.createElement("div"); st.className = "strip";
+  for(let c=0;c<3;c++) strip.forEach(id=>{
+    const cell = document.createElement("div"); cell.className = "cell";
+    const img = document.createElement("img");
+    img.src = ICON(id); img.alt = LABEL[id]; img.draggable = false;
+    cell.appendChild(img); st.appendChild(cell);
+  });
+  el.appendChild(st); reelsEl.appendChild(el);
+  return {el, st, strip, n:strip.length, pos:Math.floor(Math.random()*strip.length),
+          spinning:false, land:null, target:0, stopAt:0, speed:SPEED, landMs:2500, cells:[...st.children]};
+});
+
+// bir makaranın durduğu merkez indeks
+const idxOf = r => ((Math.round(r.pos) % r.n) + r.n) % r.n;
+
+// o anki kazanan çizgiler (yeniden boyutlandırmada çizgiyi tekrar çizmek için)
+let currentWin = null;
+let spinTension = null;   // bu spinde gerilim yaşandıysa hangi simge için
+
+let CELL = 0;
+function measure(){
+  CELL = reels[0].el.clientHeight / 3;
+  if(!CELL) return;
+  reels.forEach(r=>{
+    r.cells.forEach(c=>{c.style.height = CELL+"px"});
+    r.st.style.height = (CELL*r.n*3)+"px";
+  });
+  reels.forEach(paint);
+  if(currentWin) drawWinLines();
+}
+new ResizeObserver(measure).observe(reelsEl);
+
+function paint(r){
+  const p = ((r.pos % r.n) + r.n) % r.n;
+  const i = Math.round(p) % r.n;
+  r.st.style.transform = `translate3d(0,${-((p - 1 + r.n) * CELL)}px,0)`;
+  // durmuş makarada görünen 3 hücre (idx-1, idx, idx+1) "is-shown" olur
+  if(!r.spinning) r.cells.forEach((c,k)=>{
+    const d = (((k % r.n) - i) + r.n) % r.n;
+    c.classList.toggle("is-shown", d === 0 || d === 1 || d === r.n - 1);
+  });
+}
+
+/* ---------- KAZANAN HÜCRE / ÇİZGİ GÖRSELİ ---------- */
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+function clearWinVisuals(){
+  currentWin = null;
+  winLinesEl.innerHTML = "";
+  reels.forEach(r => r.cells.forEach(c => c.classList.remove("is-win")));
+}
+
+// kazanan çizgilerdeki hücreleri parlat (şeridin 3 kopyasında da işaretlenir)
+function markWinCells(winLines){
+  const done = new Set();
+  winLines.forEach(({ line }) => line.rows.forEach((row, i) => {
+    const key = i + ":" + row;
+    if(done.has(key)) return;
+    done.add(key);
+    const r = reels[i];
+    const m = (idxOf(r) + row - 1 + r.n) % r.n;
+    r.cells.forEach((c, k) => { if(k % r.n === m) c.classList.add("is-win"); });
+  }));
+}
+
+function cellCenter(reelIdx, row){
+  const r = reels[reelIdx].el;
+  return {
+    x: r.offsetLeft + r.clientLeft + r.clientWidth / 2,
+    y: r.offsetTop + r.clientTop + CELL * (row + 0.5)
+  };
+}
+
+function drawWinLines(){
+  winLinesEl.innerHTML = "";
+  if(!currentWin || !CELL) return;
+  currentWin.lines.forEach(line => {
+    const pts = line.rows.map((row, i) => { const c = cellCenter(i, row); return `${c.x},${c.y}`; }).join(" ");
+    const poly = document.createElementNS(SVG_NS, "polyline");
+    poly.setAttribute("points", pts);
+    poly.setAttribute("class", "win-line");
+    winLinesEl.appendChild(poly);
+    poly.style.setProperty("--len", poly.getTotalLength());
+  });
+}
+
+/* ---------- SAAT BAŞI HAK & LOCALSTORAGE ---------- */
+const HOURLY_LIMIT = 10;
+const KEY_SPINS = "agartha_spins_left";
+const KEY_HOUR = "agartha_hour_stamp";
+
+let spinsLeft = HOURLY_LIMIT;
+let running = false;
+
+function getHourStamp(){
+  const now = new Date();
+  return `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}-${now.getHours()}`;
+}
+
+function updateUI(){
+  if(!spinsEl || !lever || !machine || !caption) return;
+  spinsEl.textContent = `${spinsLeft} Hak Kaldı`;
+  const isBypass = devBypassLimit ? devBypassLimit.checked : false;
+  const canSpin = (spinsLeft > 0 || isBypass) && !running;
+  
+  lever.disabled = !canSpin;
+  lever.classList.toggle("ready", canSpin);
+  lever.classList.toggle("spent", !canSpin);
+  machine.classList.toggle("armed", canSpin);
+  caption.textContent = running ? "Dönüyor…" : (canSpin ? "Kolu Çekin" : "Hakkınız Bitti (Saat Başı Yenilenir)");
+}
+
+function initSpins(){
+  const currentStamp = getHourStamp();
+  const savedStamp = localStorage.getItem(KEY_HOUR);
+  
+  if(savedStamp !== currentStamp){
+    localStorage.setItem(KEY_HOUR, currentStamp);
+    localStorage.setItem(KEY_SPINS, HOURLY_LIMIT);
+    spinsLeft = HOURLY_LIMIT;
+  } else {
+    const savedSpins = localStorage.getItem(KEY_SPINS);
+    spinsLeft = savedSpins !== null ? parseInt(savedSpins, 10) : HOURLY_LIMIT;
+  }
+  updateUI();
+}
+
+function saveSpins(){
+  localStorage.setItem(KEY_SPINS, spinsLeft);
+  updateUI();
+}
+
+function updateResetTimer(){
+  const now = new Date();
+  const nextHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1, 0, 0);
+  const diff = Math.max(0, nextHour - now);
+  const mins = Math.floor(diff / 60000);
+  const secs = Math.floor((diff % 60000) / 1000);
+  if(resetTimerEl) {
+    resetTimerEl.textContent = `Yenilenmeye kalan süre: ${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+  }
+  if(getHourStamp() !== localStorage.getItem(KEY_HOUR)){
+    const wasEmpty = spinsLeft <= 0;
+    initSpins();
+    if(wasEmpty) sfx("refill");   // haklar yenilenince küçük bir "ding"
+  }
+}
+
+
+/* =====================================================================
+   SES MOTORU  (tamamı Web Audio API)
+   ---------------------------------------------------------------------
+   - Dosyalar ./sounds/ klasöründen yüklenir.
+   - Bir dosya yoksa oyun bozulmaz, o ses sessizce atlanır.
+   - "files" içinde birden fazla dosya = varyasyon (her seferinde farklısı çalar).
+   - "fallback" = eski dosyan; yeni dosya bulunamazsa o kullanılır.
+   - "vol" = karışım seviyesi (dosyayı düzenlemeden sesi buradan dengele).
+   ===================================================================== */
+const SOUND_DIR = "./sounds/";
+const SOUNDS = {
+  leverPull  : { files:["lever-pull.mp3"], vol:0.9 },
+  reelLoop   : { files:["reel-loop.mp3"], fallback:"cark-normal.mp3", vol:0.5, loop:true },
+  reelStop   : { files:["reel-stop-1.mp3","reel-stop-2.mp3","reel-stop-3.mp3"], fallback:"thud.mp3", fallbackRate:3, vol:0.85 },
+  tick       : { files:["tick.mp3"], vol:0.45 },
+  tension    : { files:["tension-loop.mp3"], vol:0.55, loop:true },
+  nearMiss   : { files:["near-miss.mp3"], vol:0.75 },
+  lose       : { files:["lose.mp3"], vol:0.6 },
+  winFreeSpin: { files:["win-free-spin.mp3"], fallback:"jackpot.mp3", vol:0.85 },
+  winDiscount: { files:["win-discount.mp3"], fallback:"jackpot.mp3", vol:0.9 },
+  winBeer    : { files:["win-beer.mp3"], fallback:"beerwin.mp3", vol:1 },
+  confetti   : { files:["confetti.mp3"], vol:0.8 },
+  uiClick    : { files:["ui-click.mp3"], vol:0.55 },
+  refill     : { files:["refill.mp3"], vol:0.6 },
+  ambient    : { files:["ambient-loop.mp3"], vol:0.16, loop:true }
+};
+
+const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioCtxClass({ latencyHint:"interactive" });
+
+// master -> compressor -> hoparlör (üst üste binen sesler patlamasın)
+const master = audioCtx.createGain();
+const comp = audioCtx.createDynamicsCompressor();
+comp.threshold.value = -14; comp.knee.value = 24; comp.ratio.value = 4;
+comp.attack.value = 0.003; comp.release.value = 0.25;
+master.connect(comp); comp.connect(audioCtx.destination);
+
+/* ---- sessiz mod (tercih hatırlanır) ---- */
+const KEY_MUTE = "agartha_sound_muted";
+let muted = false;
+try { muted = localStorage.getItem(KEY_MUTE) === "1"; } catch(e) {}
+master.gain.value = muted ? 0 : 1;
+
+function applyMute(){
+  master.gain.setTargetAtTime(muted ? 0 : 1, audioCtx.currentTime, 0.03);
+  soundToggle.setAttribute("aria-pressed", String(!muted));
+  soundToggle.textContent = muted ? "🔇 Ses kapalı" : "🔊 Ses açık";
+}
+applyMute();
+
+soundToggle.addEventListener("click", () => {
+  muted = !muted;
+  try { localStorage.setItem(KEY_MUTE, muted ? "1" : "0"); } catch(e) {}
+  applyMute();
+  if(!muted) sfx("uiClick");
+});
+
+/* ---- yükleme ---- */
+const buffers = {};    // key -> [AudioBuffer, ...]
+const baseRate = {};   // key -> varsayılan hız (fallback için)
+
+async function loadBuffer(url){
+  const res = await fetch(url);
+  if(!res.ok) throw new Error(res.status);
+  const arr = await res.arrayBuffer();
+  // eski Safari uyumu için callback biçimi
+  return new Promise((ok, fail) => audioCtx.decodeAudioData(arr, ok, fail));
+}
+
+async function loadSound(key, def){
+  const results = await Promise.allSettled(def.files.map(f => loadBuffer(SOUND_DIR + f)));
+  let list = results.filter(r => r.status === "fulfilled").map(r => r.value);
+  baseRate[key] = 1;
+  if(!list.length && def.fallback){
+    try {
+      list = [await loadBuffer(SOUND_DIR + def.fallback)];
+      baseRate[key] = def.fallbackRate || 1;
+    } catch(e) {}
+  }
+  if(list.length) buffers[key] = list;
+}
+
+const soundsReady = Promise.all(Object.entries(SOUNDS).map(([k, d]) => loadSound(k, d))).then(() => {
+  const missing = Object.keys(SOUNDS).filter(k => !buffers[k]);
+  console.info("[ses] eksik dosyalar:", missing.length ? missing.join(", ") : "yok");
+});
+
+/* ---- tarayıcı kilidini aç (ilk dokunuş / tıklama / tuş) ---- */
+let unlocked = false;
+const UNLOCK_EVENTS = ["pointerdown", "pointerup", "touchend", "click", "keydown"];
+
+function onUnlocked(){
+  if(unlocked) return;
+  unlocked = true;
+  UNLOCK_EVENTS.forEach(ev => window.removeEventListener(ev, unlockAudio, true));
+  startAmbient();
+}
+function unlockAudio(){
+  if(audioCtx.state === "running"){ onUnlocked(); return; }
+  audioCtx.resume().then(() => { if(audioCtx.state === "running") onUnlocked(); }).catch(() => {});
+  // iOS: jest içinde sessiz bir buffer çalmak sesi uyandırır
+  try {
+    const b = audioCtx.createBuffer(1, 1, 22050);
+    const s = audioCtx.createBufferSource();
+    s.buffer = b; s.connect(audioCtx.destination); s.start(0);
+  } catch(e) {}
+}
+UNLOCK_EVENTS.forEach(ev => window.addEventListener(ev, unlockAudio, { capture:true, passive:true }));
+
+// sekme arka plana geçince sesi askıya al
+document.addEventListener("visibilitychange", () => {
+  if(document.hidden) audioCtx.suspend();
+  else if(unlocked) audioCtx.resume();
+});
+
+/* ---- tek seferlik sesler ---- */
+const active = new Set();
+const lastVariation = {};
+
+function pickBuffer(key){
+  const list = buffers[key];
+  if(!list || !list.length) return null;
+  if(list.length === 1) return list[0];
+  let i;
+  do { i = Math.floor(Math.random() * list.length); } while(i === lastVariation[key]);
+  lastVariation[key] = i;
+  return list[i];
+}
+
+// rate: hız/pitch, jitter: rastgele pitch sapması, vol: ek ses, delay: saniye
+function sfx(key, opt = {}){
+  if(audioCtx.state !== "running") return null;   // kilitliyken "birikmiş" ses patlamasın
+  const buf = pickBuffer(key);
+  if(!buf) return null;
+  const { rate = 1, jitter = 0.04, vol = 1, delay = 0 } = opt;
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf;
+  src.playbackRate.value = (baseRate[key] || 1) * rate * (1 + (Math.random() * 2 - 1) * jitter);
+  const g = audioCtx.createGain();
+  g.gain.value = (SOUNDS[key].vol ?? 1) * vol;
+  src.connect(g); g.connect(master);
+  src.start(audioCtx.currentTime + delay);
+  const h = { src, g };
+  active.add(h);
+  src.onended = () => { active.delete(h); try { g.disconnect(); } catch(e) {} };
+  return h;
+}
+
+function stopActiveSfx(fade = 0.08){
+  const t = audioCtx.currentTime;
+  active.forEach(h => {
+    try {
+      h.g.gain.cancelScheduledValues(t);
+      h.g.gain.setTargetAtTime(0, t, fade / 3);
+      h.src.stop(t + fade);
+    } catch(e) {}
+  });
+}
+
+/* ---- döngü sesleri (kusursuz loop + fade) ---- */
+const loops = {};
+
+function startLoop(key, { fade = 0.1, vol = 1 } = {}){
+  if(!buffers[key] || loops[key]) return;
+  const src = audioCtx.createBufferSource();
+  src.buffer = buffers[key][0];
+  src.loop = true;
+  const g = audioCtx.createGain();
+  g.gain.value = 0;
+  src.connect(g); g.connect(master);
+  src.start();
+  const base = (SOUNDS[key].vol ?? 1) * vol;
+  g.gain.setTargetAtTime(base, audioCtx.currentTime, fade / 3);
+  loops[key] = { src, g, base };
+}
+
+function setLoopLevel(key, level, fade = 0.2){
+  const l = loops[key];
+  if(!l) return;
+  l.g.gain.setTargetAtTime(l.base * level, audioCtx.currentTime, fade / 3);
+}
+
+function stopLoop(key, fade = 0.15){
+  const l = loops[key];
+  if(!l) return;
+  loops[key] = null;
+  const t = audioCtx.currentTime;
+  l.g.gain.cancelScheduledValues(t);
+  l.g.gain.setTargetAtTime(0, t, fade / 3);
+  try { l.src.stop(t + fade + 0.05); } catch(e) {}
+  l.src.onended = () => { try { l.g.disconnect(); } catch(e) {} };
+}
+
+function startAmbient(){
+  if(unlocked) startLoop("ambient", { fade:3 });
+}
+soundsReady.then(startAmbient);
+
+/* ---- titreşim (Android; iOS Safari desteklemez) ---- */
+const canVibrate = typeof navigator.vibrate === "function";
+function haptic(pattern){
+  if(!canVibrate) return;
+  try { navigator.vibrate(pattern); } catch(e) {}
+}
+
+/* ---- dev paneli: ses testi ---- */
+function buildSoundTest(){
+  if(!soundTestEl) return;
+  soundTestEl.innerHTML = "";
+  Object.entries(SOUNDS).forEach(([key, def]) => {
+    const ok = !!buffers[key];
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = (ok ? "✔ " : "✖ ") + key + (def.loop ? " ⟳" : "");
+    b.className = ok ? "" : "missing";
+    b.disabled = !ok;
+    b.addEventListener("click", () => {
+      unlockAudio();
+      if(def.loop){
+        if(loops[key]){ stopLoop(key); b.classList.remove("on"); }
+        else { startLoop(key); b.classList.add("on"); }
+      } else {
+        sfx(key);
+      }
+    });
+    soundTestEl.appendChild(b);
+  });
+}
+soundsReady.then(buildSoundTest);
+
+function setBusy(b){
+  running=b;
+  updateUI();
+}
+
+/* ---------- KONFETİ (sadece BİRA kazanınca) ---------- */
+function fireBeerConfetti(){
+  if(typeof confetti !== "function") return;
+  const base = { zIndex:2000, origin:{ y:0.5 }, disableForReducedMotion:true };
+  const colors = ['#c9a46a', '#8a5a2b', '#ffffff'];
+  confetti({ ...base, particleCount:150, spread:90, colors });
+  setTimeout(() => confetti({ ...base, particleCount:70, spread:120, startVelocity:25, colors }), 350);
+}
+
+/* ---------- ANA SPİN (DÖNÜŞ) MOTORU ---------- */
+function spin(){
+  const isBypass = devBypassLimit ? devBypassLimit.checked : false;
+  if(running || (spinsLeft <= 0 && !isBypass)) return;
+  
+  if(!isBypass) {
+    spinsLeft--;
+    saveSpins();
+  }
+
+  unlockAudio();
+
+  machine.classList.remove("win", "tense"); 
+  resultEl.innerHTML=""; 
+  clearWinVisuals();
+  spinTension = null;
+  stopActiveSfx();
+  stopLoop("reelLoop", 0.05);
+  stopLoop("tension", 0.05);
+  setBusy(true);
+
+  const forced = devForceResult ? devForceResult.value : "auto";
+  const forcedLine = devForceLine ? devForceLine.value : "auto";
+  let outcome = "lose";
+
+  if(forced !== "auto"){
+    outcome = forced === "discount" ? "bill" : forced;
+  } else {
+    const rand6 = Math.random() * 600;
+    if (rand6 < 1) outcome = "beer";
+    else if (rand6 < 3) outcome = "bill";
+    else if (rand6 < 6) outcome = "free-spin";
+  }
+
+  const isWin = PRIZE_SYMBOLS.includes(outcome);
+  let isNearMiss = false;
+
+  if (outcome === "near-miss") {
+    isNearMiss = true;
+  } else if (!isWin && forced === "auto" && Math.random() < NEAR_MISS_RATE) {
+    // (forced === "auto" şartı: "Tamamen Kaybet" testinde yanlışlıkla near miss çıkmasın)
+    isNearMiss = true;
+  }
+
+  let stopTimes = [1000]; 
+  for (let i = 1; i < 4; i++) {
+      stopTimes.push(stopTimes[i - 1] + 1000 + Math.random() * 800);
+  }
+  stopTimes.sort(() => Math.random() - 0.5);
+
+  let lastReelIdx = 0;
+  let maxStop = 0;
+  stopTimes.forEach((s, i) => { if(s > maxStop) { maxStop = s; lastReelIdx = i; } });
+
+  // Sonuç önce belirlenir (olasılıklar yukarıda), sonra o sonucu gösteren 4x3 ızgara üretilir.
+  let targets;
+  if (isWin) {
+    targets = buildWinTargets(outcome, forcedLine).idxs;
+  } else if (isNearMiss) {
+    targets = buildNearMissTargets(lastReelIdx, pick(TENSION_SYMBOLS), forcedLine).idxs;
+  } else {
+    targets = buildLoseTargets();
+  }
+
+  // kol sesi + dönüş döngüsü
+  sfx("leverPull");
+  haptic(18);
+  startLoop("reelLoop", { fade:0.15 });
+
+  // Değerli ödülde (bira/hesap) kazançta da near miss'te de son makara yavaş iner:
+  // böylece yavaşlık kazanç mı ıskalama mı olduğunu ele vermez.
+  const slowLast = (isWin && TENSION_SYMBOLS.includes(outcome)) || isNearMiss;
+  const slowLandMs = 4000 + Math.random() * 800;
+
+  reels.forEach((r,i)=>{
+    r.spinning=true; r.land=null; r.stopAt=stopTimes[i]; r.target=targets[i];
+    r.speed = SPEED;
+    r.landMs = (slowLast && i === lastReelIdx) ? slowLandMs : 2500;
+
+    r.cells.forEach(c=>c.classList.remove("is-shown"));
+    r.el.classList.add("is-spinning");
+  });
+
+  const t0=performance.now(); let last=t0;
+  const schedule=fn=>document.hidden?setTimeout(()=>fn(performance.now()),100):requestAnimationFrame(fn);
+
+  let stoppedCount = 0;
+  let tensionReel = null;
+  let lastTickAt = 0;
+
+  // GERİLİM: ilk 3 makara bir çizgide AYNI ödül simgesini gösterdiyse ve 4. makara hâlâ dönüyorsa.
+  // (Ekrandaki gerçek duruma bakar; sonucu önceden ele vermez.)
+  function startTensionIfNeeded(now){
+    const lastReel = reels.find(x => x.spinning);
+    if(!lastReel) return;
+    const settled = [];
+    reels.forEach((r, i) => { if(!r.spinning) settled.push({ i, idx: idxOf(r) }); });
+    const sym = tensionSymbol(settled);
+    if(!sym) return;
+    const remaining = lastReel.land
+      ? lastReel.land.duration - ((now - t0) - lastReel.land.t0)
+      : Infinity;
+    if(remaining < 700) return;   // çok kısa kaldıysa gerilim sesi anlamsız
+    tensionReel = lastReel;
+    spinTension = sym;
+    machine.classList.add("tense");
+    startLoop("tension", { fade:0.3 });
+    setLoopLevel("reelLoop", 0.2, 0.3);
+    haptic([15, 60, 15]);
+  }
+  
+  function frame(now){
+    const dt = Math.min(50,now-last)/1000; last=now;
+    let allDone = true;
+
+    reels.forEach((r,i)=>{
+      if(!r.spinning) return;
+      allDone = false;
+
+      if((now-t0) < r.stopAt){
+        r.pos += r.speed * dt;
+        r.st.style.setProperty("--mb", "1.4px");
+      }else{
+        if(!r.land){
+          const from = r.pos;
+          let dist = ((r.target - from) % r.n + r.n) % r.n;
+          const expectedDist = (r.speed * (r.landMs / 1000)) / 3; 
+          
+          while(dist < expectedDist - (r.n * 0.25)){
+              dist += r.n;
+          }
+          
+          const duration = (3 * dist / r.speed) * 1000;
+          r.land = { from, dist, t0:(now-t0), duration };
+        }
+        
+        const p = Math.min(1, ((now-t0) - r.land.t0) / r.land.duration);
+        const e = 1 - Math.pow(1 - p, 3); 
+        const bounce = p > 0.72 ? Math.sin((p - 0.72) / 0.28 * Math.PI) * 0.08 * (1 - p) : 0;
+        
+        const prevPos = r.pos;
+        r.pos = r.land.from + r.land.dist * e + bounce;
+        r.st.style.setProperty("--mb", (1.4 * Math.pow(1 - p, 2)).toFixed(2) + "px");
+
+        // gerilim makarasında her simge geçişinde "tık" (yavaşladıkça seyrekleşir)
+        if(r === tensionReel && Math.floor(r.pos) !== Math.floor(prevPos) && now - lastTickAt > 70){
+          lastTickAt = now;
+          sfx("tick", { jitter:0.06 });
+        }
+        
+        if(p >= 1){
+          r.pos = r.target; r.spinning = false;
+          r.el.classList.remove("is-spinning");
+          r.st.style.setProperty("--mb","0px");
+
+          stoppedCount++;
+          // her duruşta pitch biraz yükselir: 1. makara alçak, sonuncu yüksek
+          sfx("reelStop", { rate: 0.92 + stoppedCount * 0.05 });
+          haptic(10);
+          setLoopLevel("reelLoop", Math.max(0.2, 1 - stoppedCount * 0.2), 0.15);
+          if(stoppedCount === 3) startTensionIfNeeded(now);
+        }
+      }
+      paint(r);
+    });
+
+    if(allDone){ finish(); return; }
+    schedule(frame);
+  }
+  schedule(frame);
+}
+
+function finish(){
+  stopLoop("reelLoop", 0.25);
+  stopLoop("tension", 0.15);
+  machine.classList.remove("tense");
+
+  // Kazanç, EKRANDA görünen 4x3 ızgaradan okunur
+  const idxs = reels.map(idxOf);
+  const wins = winningLines(idxs).filter(w => PRIZE_SYMBOLS.includes(w.symbol));
+  
+  if(wins.length){
+    const winSymbol = PRIZE_SYMBOLS.find(s => wins.some(w => w.symbol === s));
+    const winLines = wins.filter(w => w.symbol === winSymbol);
+    const lineName = winLines.map(w => w.line.name).join(" + ");
+
+    machine.classList.add("win"); 
+    markWinCells(winLines);                         // kazanan hücreler parlar
+    currentWin = { lines: winLines.map(w => w.line) };
+    drawWinLines();                                 // altın çizgi çizilir
+    haptic([30, 50, 30, 50, 140]);
+
+    // ödül nadirliğine göre kutlama; konfeti SADECE bira için
+    if(winSymbol === "beer"){
+      sfx("winBeer", { delay:0.15, jitter:0 });
+      sfx("confetti", { delay:0.25, jitter:0 });
+      setTimeout(fireBeerConfetti, 150);
+    } else if(winSymbol === "free-spin"){
+      sfx("winFreeSpin", { delay:0.15, jitter:0 });
+    } else {
+      sfx("winDiscount", { delay:0.15, jitter:0 });
+    }
+
+    let rewardText = "";
+    if(winSymbol === "beer"){
+      rewardText = REWARDS.beer;
+    } else if(winSymbol === "free-spin"){
+      rewardText = REWARDS["free-spin"];
+      spinsLeft++;
+      saveSpins();
+    } else {
+      rewardText = REWARDS.discount;
+    }
+
+    // kazanan hücreler ve çizgi görünsün diye modal kısa süre sonra açılır
+    // (bu sürede kol kilitli kalır, setBusy(false) modal ile birlikte çağrılır)
+    setTimeout(() => {
+      modalIcon.src = ICON(winSymbol);
+      modalIcon.alt = LABEL[winSymbol];
+      modalTitle.innerText = "Tebrikler!";
+      modalMessage.innerHTML = `<strong>${rewardText}</strong><br><br><span style="color:var(--agartha-muted);font-size:0.9em;">(Eşleşen Ürün: 4 × ${LABEL[winSymbol]} · ${lineName})</span>`;
+      winModal.classList.add("show");
+      resultEl.innerHTML = "";
+      setBusy(false);
+    }, WIN_MODAL_DELAY);
+
+  }else{
+    setBusy(false);
+    // Gerilim yaşandı ama kazanılmadıysa gerçekten "ucu ucuna" demektir
+    const nearSym = spinTension;
+    // Kayıp, kazanç gibi duyulmamalı: yumuşak ve kısa bir ses
+    sfx(nearSym ? "nearMiss" : "lose", { delay:0.1, jitter:0.02 });
+    if(nearSym) haptic([20, 40, 20]);
+    resultEl.innerHTML=`
+      <div class="result-card lose">
+        <h3>${nearSym ? "Ucu ucuna!" : "Tekrar Deneyin"}</h3>
+        <p>${nearSym ? `Bir çizgide 3 × ${LABEL[nearSym]} yakaladınız` : "Hiçbir çizgide 4’lü eşleşme olmadı."}</p>
+      </div>`;
+  }
+}
+
+/* ---------- MODAL KAPATMA ---------- */
+modalClose.addEventListener("click", () => {
+  sfx("uiClick");
+  winModal.classList.remove("show");
+});
+
+/* ---------- LEVER INTERACTION ---------- */
+let drag=null;
+const MAX_PULL=90;
+const setPull=v=>lever.style.setProperty("--pull",Math.max(0,Math.min(1,v)));
+
+function release(fire){
+  lever.classList.remove("dragging");
+  lever.classList.add("snapping");
+  setPull(0);
+  setTimeout(()=>lever.classList.remove("snapping"),820);
+  if(fire) spin();
+}
+function pullAndFire(){
+  lever.classList.add("snapping"); setPull(1);
+  setTimeout(()=>release(true),140);
+}
+
+lever.addEventListener("pointerdown",e=>{
+  if(lever.disabled) return;
+  lever.setPointerCapture(e.pointerId);
+  lever.classList.add("dragging");
+  drag={y:e.clientY};
+});
+lever.addEventListener("pointermove",e=>{
+  if(!drag) return;
+  const v=(e.clientY-drag.y)/MAX_PULL;
+  setPull(v);
+  if(v>=.85){ drag=null; release(true); }
+});
+lever.addEventListener("pointerup",()=>{ if(drag){drag=null; pullAndFire();} });
+lever.addEventListener("pointercancel",()=>{ if(drag){drag=null; release(false);} });
+lever.addEventListener("keydown",e=>{
+  if(e.key===" "||e.key==="Enter"){ e.preventDefault(); if(!lever.disabled) pullAndFire(); }
+});
+
+/* ---------- DEVELOPER PANEL INTERACTION ---------- */
+devToggleBtn.addEventListener("click", ()=>{
+  if(devPanel.classList.contains("open")) {
+    devPanel.classList.remove("open");
+  } else {
+    const psw = prompt("Geliştirici moduna giriş için şifreyi giriniz:");
+    if(psw === "aek06agartha"){
+      devPanel.classList.add("open");
+    } else if(psw !== null) {
+      alert("Hatalı şifre!");
+    }
+  }
+});
+
+devBypassLimit.addEventListener("change", updateUI);
+
+devResetSpinsBtn.addEventListener("click", ()=>{
+  spinsLeft = HOURLY_LIMIT;
+  saveSpins();
+  alert("Haklar 10 olarak yenilendi!");
+});
+
+devClearStorageBtn.addEventListener("click", ()=>{
+  localStorage.clear();
+  initSpins();
+  alert("LocalStorage temizlendi!");
+});
+
+/* ---------- BAŞLANGIÇ ÇALIŞTIRMA ---------- */
+setInterval(updateResetTimer, 1000);
+updateResetTimer();
+initSpins();
+measure();
+
+</script>
+</body>
+</html>
