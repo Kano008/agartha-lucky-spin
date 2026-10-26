@@ -1,0 +1,785 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agartha | Lucky Spin — Casino Edition (Shake to Spin)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap">
+<style>
+/* ---------- Agartha Casino Tokens ---------- */
+:root{
+  --agartha-bg:#080202; 
+  --agartha-bg-alt:#140505;
+  --agartha-text:#ffffff; 
+  --agartha-muted:#998888;
+  --agartha-gold:#ffcc00; 
+  --agartha-amber:#ff0033; 
+  --agartha-wine:#4a0a0a;
+  --agartha-heading-font:"Cormorant Garamond", Georgia, serif;
+  --agartha-body-font:"Inter","Segoe UI",sans-serif;
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--agartha-body-font);color:var(--agartha-text);background:#050000;-webkit-font-smoothing:antialiased}
+:where(button,a,[tabindex]):focus-visible{outline:none;border-radius:2px;
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--agartha-bg) 85%,transparent),0 0 0 4px color-mix(in srgb,var(--agartha-gold) 66%,transparent)}
+
+.game-page{min-height:100dvh;display:flex;flex-direction:column;
+  background:radial-gradient(circle at 50% 30%, #300505 0%, var(--agartha-bg) 70%, #000 100%)}
+.top-bar{padding:1.5rem;text-align:center;border-bottom:1px solid color-mix(in srgb,var(--agartha-gold) 25%,transparent);position:relative;
+  background:linear-gradient(180deg, #00000099, transparent);}
+.top-bar-lead{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+.home-link{color:var(--agartha-muted);letter-spacing:.12em;text-transform:uppercase;font-size:.75rem;text-decoration:none}
+.home-link:hover{color:var(--agartha-gold)}
+.sound-toggle{background:none;border:0;padding:0;cursor:pointer;font-family:inherit;
+  color:var(--agartha-muted);letter-spacing:.12em;text-transform:uppercase;font-size:.75rem}
+.sound-toggle:hover,.sound-toggle[aria-pressed="true"]{color:var(--agartha-gold)}
+
+.page-title{font-family:var(--agartha-heading-font);letter-spacing:.12em;color:var(--agartha-gold);text-transform:uppercase;margin:0;font-size:1.85rem;font-weight:600; text-shadow: 0 0 15px rgba(255,204,0,0.4);}
+.game-main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;padding:2rem 1.5rem}
+
+/* Info Paneli */
+.spins-info{
+  background:#0a0a0a; border:2px solid #222; border-radius:6px;
+  padding:.75rem 2rem; display:flex;flex-direction:column;gap:.25rem;align-items:center;
+  box-shadow:inset 0 0 20px rgba(255,0,51,0.2), 0 5px 15px rgba(0,0,0,0.8);
+  margin-bottom: .5rem; position:relative;
+}
+.spins-left{font-family:monospace; font-size:1.3rem;letter-spacing:.15em;text-transform:uppercase;
+  color:#ff3333;font-weight:700; text-shadow:0 0 10px #ff0033; transition: color 0.3s;}
+.spins-left.free-mode{color:#ffcc00; text-shadow:0 0 15px #ffcc00, 0 0 30px #ffcc00;}
+.reset-timer{font-family:monospace; font-size:.8rem;color:var(--agartha-gold);letter-spacing:.08em; text-shadow:0 0 5px rgba(255,204,0,0.5);}
+
+/* ==================== CABINET ==================== */
+.slot-machine{
+  width:100%;max-width:640px; 
+  background:linear-gradient(145deg, #110505, #050000);
+  border:2px solid color-mix(in srgb,var(--agartha-gold) 60%,transparent);
+  border-radius:8px; padding:1.75rem;
+  box-shadow: 0 15px 50px #000, 0 0 25px rgba(255, 0, 51, 0.4), inset 0 0 40px rgba(255, 204, 0, 0.15);
+  display:flex;flex-direction:column;gap:1.5rem;
+}
+.slot-machine.tense{animation:tense 1s ease-in-out infinite}
+@keyframes tense{50%{
+  border-color:color-mix(in srgb,var(--agartha-gold) 90%,transparent);
+  box-shadow:0 15px 50px #000, 0 0 45px rgba(255, 0, 51, 0.7), inset 0 0 50px rgba(255, 204, 0, 0.4)}}
+@media (prefers-reduced-motion:reduce){.slot-machine.tense{animation:none}}
+
+/* ---------- reels ---------- */
+.reels-container{
+  width:100%; position:relative; background:#000;
+  border:2px solid color-mix(in srgb,var(--agartha-gold) 50%,transparent);
+  border-radius:6px;padding:.85rem; display:flex;gap:.5rem;
+  box-shadow:inset 0 15px 40px #000, 0 0 15px rgba(255,204,0,0.2);
+}
+.reels-container::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:5;border-radius:4px;
+  background:linear-gradient(112deg,#ffffff07 0%,#0000 34%,#0000 72%,#ffffff05 100%)}
+.reel{
+  flex:1;min-width:0;position:relative;overflow:hidden;
+  aspect-ratio:1 / 5;
+  background:#080808; border:1px solid color-mix(in srgb,var(--agartha-gold) 20%,transparent);
+  border-radius:4px;box-shadow:inset 0 0 26px #000a;
+}
+.reel::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:3;
+  background:linear-gradient(#000000f0 0%,#00000040 15%,#0000 35%,#0000 65%,#00000040 85%,#000000f0 100%)}
+.strip{position:absolute;left:0;right:0;top:0;will-change:transform;filter:blur(var(--mb,0px))}
+.cell{display:flex;align-items:center;justify-content:center}
+.cell img{width:68%;max-width:5rem;object-fit:contain;display:block;user-select:none;pointer-events:none;
+  opacity:.35;filter:grayscale(.6) brightness(.7);
+  transition:opacity .34s var(--ease),filter .34s var(--ease),transform .34s var(--ease)}
+.cell.is-payline img{opacity:1;filter:drop-shadow(0 0 8px rgba(255,204,0,0.4));transform:scale(1.35)}
+.reel.is-spinning .cell img{opacity:.66;filter:grayscale(.3) brightness(1.2);transform:scale(1.1) skewY(2deg);transition:none}
+
+/* payline */
+.payline{position:absolute;left:0;right:0;top:50%;height:var(--payh,20%);transform:translateY(-50%);pointer-events:none;z-index:4}
+.payline::before,.payline::after{content:"";position:absolute;left:.2rem;right:.2rem;height:2px;
+  background:linear-gradient(90deg,transparent,var(--agartha-amber) 15%,var(--agartha-gold) 50%,var(--agartha-amber) 85%,transparent);
+  box-shadow:0 0 10px var(--agartha-amber);
+  transition:background .4s var(--ease),box-shadow .4s var(--ease),opacity .4s;}
+.payline::before{top:0} .payline::after{bottom:0}
+.notch{position:absolute;top:50%;width:0;height:0;transform:translateY(-50%);
+  border-top:6px solid transparent;border-bottom:6px solid transparent}
+.notch.l{left:1px;border-left:8px solid var(--agartha-amber); filter:drop-shadow(0 0 4px var(--agartha-amber))}
+.notch.r{right:1px;border-right:8px solid var(--agartha-amber); filter:drop-shadow(0 0 4px var(--agartha-amber))}
+.slot-machine.win .payline::before,.slot-machine.win .payline::after{
+  background:linear-gradient(90deg,transparent,var(--agartha-gold) 20%,#fff 50%,var(--agartha-gold) 80%,transparent);
+  box-shadow:0 0 20px var(--agartha-gold), 0 0 40px #fff;
+  animation:payglow .8s ease-in-out 4}
+@keyframes payglow{50%{opacity:.2}}
+
+/* ==================== YENİ SPIN BUTONU ==================== */
+.spin-btn-container { text-align:center; position:relative; }
+.spin-btn {
+  background: radial-gradient(circle at 50% 10%, #ff4d4d, #cc0000 60%, #660000);
+  border: 3px solid #ff9999; border-radius: 50px;
+  color: #fff; font-family: var(--agartha-body-font);
+  font-size: 1.4rem; font-weight: 700; letter-spacing: 0.1em;
+  padding: 1.2rem 3rem; cursor: pointer; text-transform: uppercase;
+  box-shadow: 0 8px 25px rgba(204,0,0,0.6), inset 0 3px 10px rgba(255,255,255,0.4);
+  transition: all 0.15s ease;
+  position:relative; overflow:hidden;
+}
+.spin-btn::after {
+  content:""; position:absolute; inset:0; border-radius:50px;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  transform:translateX(-100%); transition:transform 0.5s;
+}
+.spin-btn:hover::after { transform:translateX(100%); }
+.spin-btn:active { transform: translateY(4px); box-shadow: 0 2px 10px rgba(204,0,0,0.6); }
+.spin-btn:disabled { filter: grayscale(1) brightness(0.5); cursor: not-allowed; transform:none; }
+
+.shake-hint {
+  display:block; margin-top:0.75rem; font-size:0.8rem; color:var(--agartha-gold);
+  letter-spacing:0.15em; font-weight:600; text-shadow:0 0 8px rgba(255,204,0,0.5);
+  animation: pulseHint 2s infinite;
+}
+@keyframes pulseHint { 50% { opacity:0.4; } }
+
+/* ---------- KAZANÇ BİRİKİM ALANI ---------- */
+.accumulated-area {
+  width:100%; max-width:640px; background: rgba(255,204,0,0.05);
+  border: 1px dashed var(--agartha-gold); border-radius: 6px;
+  padding: 1rem; text-align: center; display: none;
+}
+.accumulated-area.active { display: block; animation: fadeIn 0.4s; }
+.accumulated-title { color:var(--agartha-gold); font-size:0.85rem; letter-spacing:0.1em; margin:0 0 0.5rem; text-transform:uppercase; }
+.accumulated-list { display:flex; justify-content:center; gap:1rem; flex-wrap:wrap; }
+.acc-item { background:rgba(0,0,0,0.5); padding:0.4rem 0.8rem; border-radius:4px; border:1px solid #333; font-size:0.9rem; }
+.acc-item img { width:20px; vertical-align:middle; margin-right:6px; }
+
+@keyframes fadeIn { from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)} }
+
+/* ---------- FLASH MESSAGE (Free Spin için) ---------- */
+.flash-message {
+  position:absolute; inset:0; z-index:50; display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); opacity:0; pointer-events:none; transition:opacity 0.3s;
+}
+.flash-message.show { opacity:1; }
+.flash-text {
+  font-family:var(--agartha-heading-font); font-size:3rem; color:var(--agartha-gold);
+  text-shadow: 0 0 20px #ffcc00, 0 0 40px #ffcc00; transform:scale(0.5); transition:transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.flash-message.show .flash-text { transform:scale(1); }
+
+/* ==================== WIN POP-UP (MODAL) ==================== */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.9); backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s var(--ease);
+}
+.modal-overlay.show { opacity: 1; pointer-events: auto; }
+.modal-content {
+  background: radial-gradient(circle at top, #300505, #0a0000); border: 2px solid var(--agartha-gold);
+  padding: 2.5rem 2rem; border-radius: 8px; text-align: center; max-width: 420px; width: 90%;
+  transform: scale(0.8) translateY(30px); transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 20px 50px #000, 0 0 60px rgba(255,204,0,0.3);
+}
+.modal-overlay.show .modal-content { transform: scale(1) translateY(0); }
+.modal-content img { width: 100px; height: 100px; object-fit: contain; margin: 0 auto 1.25rem; display: block; filter: drop-shadow(0 0 20px var(--agartha-gold)); }
+.modal-content h2 { font-family: var(--agartha-heading-font); color: var(--agartha-gold); margin: 0 0 1rem; font-size: 2.4rem; text-shadow:0 0 15px rgba(255,204,0,0.5); }
+.modal-content p { color: #fff; margin: 0 0 2rem; font-size: 1.15rem; line-height: 1.5; }
+.modal-btn {
+  background: linear-gradient(180deg, #ffea00, #ffcc00); color: #000; border: none; padding: 1rem 3rem; font-size: 1.1rem; font-weight: 700;
+  border-radius: 4px; cursor: pointer; transition: all 0.2s; font-family: var(--agartha-body-font); text-transform: uppercase; letter-spacing: .1em; box-shadow: 0 0 15px rgba(255,204,0,0.5);
+}
+.modal-btn:hover { background: #fff; box-shadow: 0 0 25px rgba(255,255,255,0.8); }
+
+/* ==================== DEVELOPER PANEL ==================== */
+.dev-toggle-btn{ position:absolute;right:1rem;top:1.5rem; background:transparent; border:1px solid var(--agartha-muted); color:var(--agartha-muted); font-size:.7rem;padding:.35rem .75rem;border-radius:4px; cursor:pointer;transition:all .2s ease; }
+.dev-toggle-btn:hover{background:var(--agartha-muted);color:#000}
+.dev-panel{ display:none;width:100%;max-width:640px; background:#111;border:1px dashed var(--agartha-amber); border-radius:4px;padding:1rem;margin-top:1rem; font-size:.82rem;color:var(--agartha-text); }
+.dev-panel.open{display:block}
+.dev-panel h4{margin:0 0 .75rem;color:var(--agartha-amber);font-size:1rem;text-transform:uppercase;letter-spacing:.05em}
+.dev-group{margin-bottom:.75rem;display:flex;flex-direction:column;gap:.35rem}
+.dev-group label{color:var(--agartha-muted);font-size:.78rem}
+.dev-group select, .dev-group button{ background:#202020;border:1px solid #333;color:var(--agartha-text); padding:.4rem .6rem;border-radius:3px;font-size:.8rem;cursor:pointer; }
+.dev-group button:hover{border-color:var(--agartha-gold);color:var(--agartha-gold)}
+.dev-row{display:flex;gap:.5rem;align-items:center}
+.sound-test{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.4rem}
+.sound-test button{text-align:left}
+.sound-test button.missing{opacity:.45;cursor:not-allowed}
+.sound-test button.on{border-color:var(--agartha-gold);color:var(--agartha-gold)}
+
+@media (max-width:680px){
+  .slot-machine{padding:1.2rem; gap:1rem;}
+  .reels-container{padding:.6rem;gap:.35rem}
+  .spin-btn { padding: 1rem 2.5rem; font-size:1.2rem; }
+  .dev-toggle-btn{position:static;margin-top:.5rem;display:inline-block}
+}
+</style>
+</head>
+<body>
+<div class="game-page">
+  <header class="top-bar">
+    <div class="top-bar-lead">
+      <a class="home-link" href="#">&larr; Home</a>
+      <button class="sound-toggle" id="soundToggle" type="button" aria-pressed="true">🔊 Ses açık</button>
+      <span class="home-link">TR / EN</span>
+    </div>
+    <h1 class="page-title">Lucky Spin</h1>
+    <button class="dev-toggle-btn" id="devToggleBtn">🛠️ Dev Mode</button>
+  </header>
+
+  <main class="game-main">
+    <div class="spins-info">
+      <span class="spins-left" id="spinsLeft">10 HAK KALDI</span>
+      <span class="reset-timer" id="resetTimer">SIFIRLANMA: --:--</span>
+    </div>
+
+    <div class="slot-machine armed" id="machine">
+      <div class="reels-container" id="reels">
+        <div class="payline" id="payline"><span class="notch l"></span><span class="notch r"></span></div>
+        <div class="flash-message" id="flashMessage"><span class="flash-text">+1 FREE SPIN!</span></div>
+      </div>
+      
+      <div class="spin-btn-container">
+        <button class="spin-btn" id="spinBtn">DÖNDÜR</button>
+        <span class="shake-hint">VEYA TELEFONU SALLA 📱</span>
+      </div>
+    </div>
+
+    <!-- Biriken Ödüller Alanı -->
+    <div class="accumulated-area" id="accumulatedArea">
+      <h4 class="accumulated-title">Bu Turda Kazanılanlar</h4>
+      <div class="accumulated-list" id="accumulatedList"></div>
+    </div>
+
+    <!-- WIN POP-UP (MODAL) -->
+    <div class="modal-overlay" id="winModal">
+      <div class="modal-content">
+        <img id="modalIcon" src="" alt="">
+        <h2 id="modalTitle">BÜYÜK İKRAMİYE!</h2>
+        <p id="modalMessage">Kazanılan ödül detayı...</p>
+        <button class="modal-btn" id="modalClose">KAZANCI AL</button>
+      </div>
+    </div>
+
+    <!-- DEVELOPER TEST PANEL -->
+    <div class="dev-panel" id="devPanel">
+      <h4>🛠️ Developer Test Modu</h4>
+      <div class="dev-group">
+        <label><input type="checkbox" id="devBypassLimit"> Sınırsız Hak / Süre Engelini Kaldır</label>
+      </div>
+      <div class="dev-group">
+        <label>Sonraki Spin Sonucunu Zorla (Test):</label>
+        <select id="devForceResult">
+          <option value="auto">Otomatik Oransal (Yeni: 15% FreeSpin, 5% İndirim, 2% Bira)</option>
+          <option value="beer">Zorla: Ücretsiz Bira</option>
+          <option value="discount">Zorla: %30 İndirim (Hesap)</option>
+          <option value="free-spin">Zorla: Free Spin</option>
+          <option value="near-miss">Zorla: Ucu Ucuna Kaybet (Near Miss)</option>
+          <option value="lose">Zorla: Tamamen Kaybet</option>
+        </select>
+      </div>
+      <div class="dev-group">
+        <label>Ses testi:</label>
+        <div class="sound-test" id="soundTest"></div>
+      </div>
+      <div class="dev-row">
+        <button id="devResetSpinsBtn">Hakları 10 Yap</button>
+        <button id="devClearStorageBtn">Tüm Hafızayı Sıfırla</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ---------- DOM ELEMANLARI ---------- */
+const machine = document.getElementById("machine");
+const spinBtn = document.getElementById("spinBtn");
+const reelsEl = document.getElementById("reels");
+const spinsEl = document.getElementById("spinsLeft");
+const resetTimerEl = document.getElementById("resetTimer");
+const flashMessage = document.getElementById("flashMessage");
+
+const accumulatedArea = document.getElementById("accumulatedArea");
+const accumulatedList = document.getElementById("accumulatedList");
+
+const devToggleBtn = document.getElementById("devToggleBtn");
+const devPanel = document.getElementById("devPanel");
+const devBypassLimit = document.getElementById("devBypassLimit");
+const devForceResult = document.getElementById("devForceResult");
+const devResetSpinsBtn = document.getElementById("devResetSpinsBtn");
+const devClearStorageBtn = document.getElementById("devClearStorageBtn");
+const soundTestEl = document.getElementById("soundTest");
+const soundToggle = document.getElementById("soundToggle");
+
+const winModal = document.getElementById("winModal");
+const modalIcon = document.getElementById("modalIcon");
+const modalTitle = document.getElementById("modalTitle");
+const modalMessage = document.getElementById("modalMessage");
+const modalClose = document.getElementById("modalClose");
+
+/* ---------- SİMGE VE SÖZLÜKLER ---------- */
+const STRIPS = [
+ "logo.bill.free-spin.vodka-energy.vodka-energy.free-spin.gin-tonic.gin-tonic.free-spin.cocktail.cocktail.free-spin.cocktail.pizza.free-spin.pizza.pizza.shot.free-spin.shot.shot.free-spin.shot.beer.free-spin.beer.beer.free-spin.beer.beer.free-spin.beer".split("."),
+ "logo.bill.free-spin.bill.vodka-energy.free-spin.vodka-energy.gin-tonic.free-spin.gin-tonic.cocktail.free-spin.cocktail.cocktail.free-spin.pizza.pizza.pizza.free-spin.shot.shot.free-spin.shot.shot.free-spin.beer.beer.free-spin.beer.beer.free-spin.beer".split("."),
+ "logo.bill.free-spin.vodka-energy.vodka-energy.free-spin.gin-tonic.gin-tonic.free-spin.cocktail.cocktail.free-spin.cocktail.pizza.free-spin.pizza.pizza.pizza.free-spin.shot.shot.free-spin.shot.shot.free-spin.beer.beer.free-spin.beer.beer.free-spin.beer".split("."),
+ "logo.bill.free-spin.bill.vodka-energy.free-spin.vodka-energy.gin-tonic.free-spin.gin-tonic.cocktail.free-spin.cocktail.cocktail.free-spin.pizza.pizza.pizza.free-spin.shot.shot.free-spin.shot.shot.free-spin.beer.beer.free-spin.beer.beer.free-spin.beer".split(".")
+];
+const ICON = id => `./drinks/${id}.png`;
+const LABEL = {logo:"Agartha",bill:"Hesap",beer:"Bira",shot:"Shot",cocktail:"Kokteyl",
+  pizza:"Pizza","vodka-energy":"Vodka & Energy","gin-tonic":"Gin & Tonic","free-spin":"Free Spin"};
+
+const REWARDS = {
+  beer: "ÜCRETSİZ BİRA",
+  "free-spin": "+1 EKSTRA SPİN",
+  discount: "%30 İNDİRİM"
+};
+
+const PRIZE_SYMBOLS = ["beer", "bill", "free-spin"];
+const NEAR_MISS_RATE = 0.05;
+
+/* ---------- IMAGE PRELOAD ---------- */
+function preloadImages() {
+  Object.keys(LABEL).forEach(id => { const img = new Image(); img.src = ICON(id); });
+}
+preloadImages();
+
+const SPEED = 36; 
+
+/* ---------- ÇARK KURULUMU ---------- */
+const reels = STRIPS.map(strip=>{
+  const el = document.createElement("div"); el.className = "reel";
+  const st = document.createElement("div"); st.className = "strip";
+  for(let c=0;c<5;c++) strip.forEach(id=>{
+    const cell = document.createElement("div"); cell.className = "cell";
+    const img = document.createElement("img");
+    img.src = ICON(id); img.alt = LABEL[id]; img.draggable = false;
+    cell.appendChild(img); st.appendChild(cell);
+  });
+  el.appendChild(st); reelsEl.appendChild(el);
+  return {el, st, strip, n:strip.length, pos:Math.floor(Math.random()*strip.length),
+          spinning:false, land:null, target:0, stopAt:0, speed:SPEED, landMs:2500, cells:[...st.children]};
+});
+
+let CELL = 0;
+function measure(){
+  CELL = reels[0].el.clientHeight / 5;
+  if(!CELL) return;
+  reels.forEach(r=>{
+    r.cells.forEach(c=>{c.style.height = CELL+"px"});
+    r.st.style.height = (CELL*r.n*5)+"px";
+  });
+  document.getElementById("payline").style.setProperty("--payh", CELL+"px");
+  reels.forEach(paint);
+}
+new ResizeObserver(measure).observe(reelsEl);
+
+function paint(r){
+  const p = ((r.pos % r.n) + r.n) % r.n;
+  const i = Math.round(p) % r.n;
+  r.st.style.transform = `translate3d(0,${-((p - 2 + r.n) * CELL)}px,0)`;
+  if(!r.spinning) r.cells.forEach((c,k)=>c.classList.toggle("is-payline",(k % r.n)===i));
+}
+const center = r => r.strip[((Math.round(r.pos)%r.n)+r.n)%r.n];
+
+/* ---------- SAAT BAŞI HAK & STATE ---------- */
+const HOURLY_LIMIT = 10;
+const KEY_SPINS = "agartha_spins_left";
+const KEY_HOUR = "agartha_hour_stamp";
+
+let spinsLeft = HOURLY_LIMIT;
+let running = false;
+
+// KAZANÇ BİRİKTİRME DEĞİŞKENLERİ
+let activeFreeSpins = 0; 
+let sessionRewards = []; // ["beer", "discount", "beer"]
+
+function getHourStamp(){
+  const now = new Date(); return `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}-${now.getHours()}`;
+}
+
+function updateUI(){
+  if(!spinsEl || !spinBtn || !machine) return;
+  const isBypass = devBypassLimit ? devBypassLimit.checked : false;
+  
+  if(activeFreeSpins > 0) {
+    spinsEl.textContent = `${activeFreeSpins} OTO SPİN KALDI`;
+    spinsEl.classList.add("free-mode");
+  } else {
+    spinsEl.textContent = `${spinsLeft} HAK KALDI`;
+    spinsEl.classList.remove("free-mode");
+  }
+
+  const canSpin = (spinsLeft > 0 || activeFreeSpins > 0 || isBypass) && !running;
+  spinBtn.disabled = !canSpin;
+  spinBtn.textContent = running ? "DÖNÜYOR…" : (canSpin ? "DÖNDÜR" : "HAKKINIZ BİTTİ");
+  machine.classList.toggle("armed", canSpin);
+
+  // Kazanılanlar listesini güncelle
+  if(sessionRewards.length > 0) {
+    accumulatedArea.classList.add("active");
+    const counts = {};
+    sessionRewards.forEach(r => counts[r] = (counts[r]||0) + 1);
+    accumulatedList.innerHTML = Object.keys(counts).map(k => 
+      `<div class="acc-item"><img src="${ICON(k==='discount'?'bill':k)}"> ${counts[k]}x ${REWARDS[k]||k}</div>`
+    ).join("");
+  } else {
+    accumulatedArea.classList.remove("active");
+  }
+}
+
+function initSpins(){
+  const currentStamp = getHourStamp();
+  const savedStamp = localStorage.getItem(KEY_HOUR);
+  if(savedStamp !== currentStamp){
+    localStorage.setItem(KEY_HOUR, currentStamp);
+    localStorage.setItem(KEY_SPINS, HOURLY_LIMIT);
+    spinsLeft = HOURLY_LIMIT;
+  } else {
+    const savedSpins = localStorage.getItem(KEY_SPINS);
+    spinsLeft = savedSpins !== null ? parseInt(savedSpins, 10) : HOURLY_LIMIT;
+  }
+  updateUI();
+}
+function saveSpins(){ localStorage.setItem(KEY_SPINS, spinsLeft); updateUI(); }
+function updateResetTimer(){
+  const now = new Date(); const nextHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1, 0, 0);
+  const diff = Math.max(0, nextHour - now);
+  resetTimerEl.textContent = `SIFIRLANMA: ${Math.floor(diff / 60000).toString().padStart(2,'0')}:${Math.floor((diff % 60000) / 1000).toString().padStart(2,'0')}`;
+  if(getHourStamp() !== localStorage.getItem(KEY_HOUR)){
+    if(spinsLeft <= 0) sfx("refill");
+    initSpins();
+  }
+}
+
+/* ==================== SES MOTORU ==================== */
+const SOUND_DIR = "./sounds/";
+const SOUNDS = {
+  leverPull  : { files:["lever-pull.mp3"], vol:0.9 },
+  reelLoop   : { files:["reel-loop.mp3"], fallback:"cark-normal.mp3", vol:0.5, loop:true },
+  reelStop   : { files:["reel-stop-1.mp3","reel-stop-2.mp3","reel-stop-3.mp3"], fallback:"thud.mp3", fallbackRate:3, vol:0.85 },
+  tick       : { files:["tick.mp3"], vol:0.45 },
+  tension    : { files:["tension-loop.mp3"], vol:0.55, loop:true },
+  nearMiss   : { files:["near-miss.mp3"], vol:0.75 },
+  lose       : { files:["lose.mp3"], vol:0.6 },
+  winFreeSpin: { files:["win-free-spin.mp3"], fallback:"jackpot.mp3", vol:0.85 },
+  winDiscount: { files:["win-discount.mp3"], fallback:"jackpot.mp3", vol:0.9 },
+  winBeer    : { files:["win-beer.mp3"], fallback:"beerwin.mp3", vol:1 },
+  confetti   : { files:["confetti.mp3"], vol:0.8 },
+  uiClick    : { files:["ui-click.mp3"], vol:0.55 },
+  refill     : { files:["refill.mp3"], vol:0.6 },
+  ambient    : { files:["ambient-loop.mp3"], vol:0.16, loop:true }
+};
+
+const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioCtxClass({ latencyHint:"interactive" });
+const master = audioCtx.createGain();
+const comp = audioCtx.createDynamicsCompressor();
+comp.threshold.value = -14; comp.knee.value = 24; comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.25;
+master.connect(comp); comp.connect(audioCtx.destination);
+const KEY_MUTE = "agartha_sound_muted"; let muted = false; try { muted = localStorage.getItem(KEY_MUTE) === "1"; } catch(e) {}
+master.gain.value = muted ? 0 : 1;
+
+function applyMute(){
+  master.gain.setTargetAtTime(muted ? 0 : 1, audioCtx.currentTime, 0.03);
+  soundToggle.setAttribute("aria-pressed", String(!muted)); soundToggle.textContent = muted ? "🔇 Ses kapalı" : "🔊 Ses açık";
+}
+applyMute();
+soundToggle.addEventListener("click", () => { muted = !muted; try { localStorage.setItem(KEY_MUTE, muted ? "1" : "0"); } catch(e) {} applyMute(); if(!muted) sfx("uiClick"); });
+
+const buffers = {}; const baseRate = {};
+async function loadBuffer(url){ const res = await fetch(url); if(!res.ok) throw new Error(res.status); return new Promise((ok, fail) => audioCtx.decodeAudioData(await res.arrayBuffer(), ok, fail)); }
+async function loadSound(key, def){
+  const results = await Promise.allSettled(def.files.map(f => loadBuffer(SOUND_DIR + f)));
+  let list = results.filter(r => r.status === "fulfilled").map(r => r.value); baseRate[key] = 1;
+  if(!list.length && def.fallback){ try { list = [await loadBuffer(SOUND_DIR + def.fallback)]; baseRate[key] = def.fallbackRate || 1; } catch(e) {} }
+  if(list.length) buffers[key] = list;
+}
+const soundsReady = Promise.all(Object.entries(SOUNDS).map(([k, d]) => loadSound(k, d)));
+
+let unlocked = false; const UNLOCK_EVENTS = ["pointerdown", "pointerup", "touchend", "click", "keydown"];
+function onUnlocked(){
+  if(unlocked) return; unlocked = true; UNLOCK_EVENTS.forEach(ev => window.removeEventListener(ev, unlockAudio, true));
+  startAmbient(); requestMotionPermission(); // Ses açıldığında İvmeölçer izni de istenir
+}
+function unlockAudio(){
+  if(audioCtx.state === "running"){ onUnlocked(); return; }
+  audioCtx.resume().then(() => { if(audioCtx.state === "running") onUnlocked(); }).catch(() => {});
+  try { const b = audioCtx.createBuffer(1, 1, 22050); const s = audioCtx.createBufferSource(); s.buffer = b; s.connect(audioCtx.destination); s.start(0); } catch(e) {}
+}
+UNLOCK_EVENTS.forEach(ev => window.addEventListener(ev, unlockAudio, { capture:true, passive:true }));
+document.addEventListener("visibilitychange", () => { if(document.hidden) audioCtx.suspend(); else if(unlocked) audioCtx.resume(); });
+
+const active = new Set(); const lastVariation = {};
+function pickBuffer(key){
+  const list = buffers[key]; if(!list || !list.length) return null; if(list.length === 1) return list[0];
+  let i; do { i = Math.floor(Math.random() * list.length); } while(i === lastVariation[key]); lastVariation[key] = i; return list[i];
+}
+function sfx(key, opt = {}){
+  if(audioCtx.state !== "running") return null; const buf = pickBuffer(key); if(!buf) return null;
+  const { rate = 1, jitter = 0.04, vol = 1, delay = 0 } = opt; const src = audioCtx.createBufferSource(); src.buffer = buf;
+  src.playbackRate.value = (baseRate[key] || 1) * rate * (1 + (Math.random() * 2 - 1) * jitter);
+  const g = audioCtx.createGain(); g.gain.value = (SOUNDS[key].vol ?? 1) * vol; src.connect(g); g.connect(master);
+  src.start(audioCtx.currentTime + delay); const h = { src, g }; active.add(h);
+  src.onended = () => { active.delete(h); try { g.disconnect(); } catch(e) {} }; return h;
+}
+function stopActiveSfx(fade = 0.08){ const t = audioCtx.currentTime; active.forEach(h => { try { h.g.gain.cancelScheduledValues(t); h.g.gain.setTargetAtTime(0, t, fade / 3); h.src.stop(t + fade); } catch(e) {} }); }
+
+const loops = {};
+function startLoop(key, { fade = 0.1, vol = 1 } = {}){
+  if(!buffers[key] || loops[key]) return; const src = audioCtx.createBufferSource(); src.buffer = buffers[key][0]; src.loop = true;
+  const g = audioCtx.createGain(); g.gain.value = 0; src.connect(g); g.connect(master); src.start();
+  const base = (SOUNDS[key].vol ?? 1) * vol; g.gain.setTargetAtTime(base, audioCtx.currentTime, fade / 3); loops[key] = { src, g, base };
+}
+function setLoopLevel(key, level, fade = 0.2){ const l = loops[key]; if(l) l.g.gain.setTargetAtTime(l.base * level, audioCtx.currentTime, fade / 3); }
+function stopLoop(key, fade = 0.15){
+  const l = loops[key]; if(!l) return; loops[key] = null; const t = audioCtx.currentTime;
+  l.g.gain.cancelScheduledValues(t); l.g.gain.setTargetAtTime(0, t, fade / 3); try { l.src.stop(t + fade + 0.05); } catch(e) {} l.src.onended = () => { try { l.g.disconnect(); } catch(e) {} };
+}
+function startAmbient(){ if(unlocked) startLoop("ambient", { fade:3 }); }
+soundsReady.then(startAmbient);
+
+const canVibrate = typeof navigator.vibrate === "function";
+function haptic(pattern){ if(canVibrate) try { navigator.vibrate(pattern); } catch(e) {} }
+function setBusy(b){ running=b; updateUI(); }
+function fireConfetti(kind){
+  if(typeof confetti !== "function") return; const base = { zIndex:2000, origin:{ y:0.5 }, disableForReducedMotion:true };
+  if(kind === "beer"){ const colors = ['#ffcc00', '#ff0033', '#ffffff']; confetti({ ...base, particleCount:150, spread:90, colors }); setTimeout(() => confetti({ ...base, particleCount:70, spread:120, startVelocity:25, colors }), 350); }
+  else if(kind === "discount"){ confetti({ ...base, particleCount:60, spread:70, shapes:["circle"], scalar:0.9, colors:['#ffcc00', '#ffffff', '#ff0033'] }); }
+  else { confetti({ ...base, particleCount:40, spread:60, shapes:["star"], scalar:1.1, colors:['#ffcc00', '#ffffff'] }); }
+}
+
+/* ==================== SALLA VE DÖNDÜR (SHAKE) ==================== */
+let lastX=0, lastY=0, lastZ=0, lastShakeTime=0;
+function handleMotion(e) {
+  if(running) return;
+  let acc = e.acceleration;
+  if(!acc || acc.x === null) acc = e.accelerationIncludingGravity;
+  if(!acc || acc.x === null) return;
+  
+  const deltaX = Math.abs(acc.x - lastX);
+  const deltaY = Math.abs(acc.y - lastY);
+  const deltaZ = Math.abs(acc.z - lastZ);
+  
+  // Eşik değeri (Sallama şiddeti)
+  if (deltaX + deltaY + deltaZ > 45) { 
+    const now = Date.now();
+    if(now - lastShakeTime > 1500) {
+      lastShakeTime = now;
+      spinBtn.click(); // Sallandığında butona basılmış gibi davran
+    }
+  }
+  lastX = acc.x; lastY = acc.y; lastZ = acc.z;
+}
+
+function requestMotionPermission() {
+  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+    DeviceMotionEvent.requestPermission().then(state => {
+      if (state === 'granted') window.addEventListener('devicemotion', handleMotion);
+    }).catch(console.error);
+  } else {
+    window.addEventListener('devicemotion', handleMotion);
+  }
+}
+
+/* ---------- ANA SPİN MOTORU ---------- */
+spinBtn.addEventListener("click", () => {
+  if(running) return;
+  unlockAudio();
+
+  const isBypass = devBypassLimit ? devBypassLimit.checked : false;
+  
+  // Free spin değilse ve normal hak bittiyse engelle
+  if (activeFreeSpins <= 0 && spinsLeft <= 0 && !isBypass) return;
+
+  // Hak düşme ve Session sıfırlama
+  if (activeFreeSpins > 0) {
+    activeFreeSpins--;
+  } else {
+    if (!isBypass) spinsLeft--;
+    sessionRewards = []; // Yeni normal dönüşte kazançları sıfırla
+  }
+  saveSpins();
+
+  machine.classList.remove("win", "tense"); 
+  stopActiveSfx(); stopLoop("reelLoop", 0.05); stopLoop("tension", 0.05);
+  setBusy(true);
+
+  const forced = devForceResult ? devForceResult.value : "auto";
+  let outcome = "lose";
+
+  // YENİ ORANLAR: %15 Free Spin, %5 İndirim, %2 Bira
+  if(forced !== "auto"){
+    outcome = forced === "discount" ? "bill" : forced;
+  } else {
+    const rand = Math.random() * 100;
+    if (rand < 2) outcome = "beer";
+    else if (rand < 7) outcome = "bill";
+    else if (rand < 22) outcome = "free-spin";
+  }
+
+  const isWin = PRIZE_SYMBOLS.includes(outcome);
+  let isNearMiss = false;
+  if (outcome === "near-miss" || (!isWin && forced === "auto" && Math.random() < NEAR_MISS_RATE)) isNearMiss = true;
+
+  const outcomeSymbol = isWin ? outcome : null;
+  let targets = [];
+  let stopTimes = [1000]; 
+  for (let i = 1; i < 4; i++) stopTimes.push(stopTimes[i - 1] + 1000 + Math.random() * 800);
+  stopTimes.sort(() => Math.random() - 0.5);
+
+  let lastReelIdx = 0; let maxStop = 0;
+  stopTimes.forEach((s, i) => { if(s > maxStop) { maxStop = s; lastReelIdx = i; } });
+
+  if (isWin) {
+    targets = reels.map(r => {
+        const valids = []; r.strip.forEach((sym, idx) => { if(sym === outcomeSymbol) valids.push(idx); });
+        return valids[Math.floor(Math.random() * valids.length)];
+    });
+  } else if (isNearMiss) {
+    const teaseSym = PRIZE_SYMBOLS[Math.floor(Math.random() * PRIZE_SYMBOLS.length)];
+    targets = reels.map((r, i) => {
+        const valids = []; r.strip.forEach((sym, idx) => { if(sym === teaseSym) valids.push(idx); });
+        let targetIdx = valids[Math.floor(Math.random() * valids.length)];
+        if (i === lastReelIdx) {
+            targetIdx = (targetIdx + 1) % r.n;
+            while(r.strip[targetIdx] === teaseSym) targetIdx = (targetIdx + 1) % r.n;
+        }
+        return targetIdx;
+    });
+  } else {
+    do { targets = reels.map(r => Math.floor(Math.random() * r.n)); } 
+    while (reels[0].strip[targets[0]] === reels[1].strip[targets[1]] && reels[1].strip[targets[1]] === reels[2].strip[targets[2]] && reels[2].strip[targets[2]] === reels[3].strip[targets[3]]);
+  }
+
+  sfx("leverPull"); haptic(18); startLoop("reelLoop", { fade:0.15 });
+
+  reels.forEach((r,i)=>{
+    r.spinning=true; r.land=null; r.stopAt=stopTimes[i]; r.target=targets[i]; r.speed = SPEED; r.landMs = 2500; 
+    if(isNearMiss && i === lastReelIdx) r.landMs = 4500; 
+    r.cells.forEach(c=>c.classList.remove("is-payline")); r.el.classList.add("is-spinning");
+  });
+
+  const t0=performance.now(); let last=t0; let stoppedCount = 0; let tensionReel = null; let lastTickAt = 0;
+  const schedule=fn=>document.hidden?setTimeout(()=>fn(performance.now()),100):requestAnimationFrame(fn);
+
+  function startTensionIfNeeded(now){
+    const lastReel = reels.find(x => x.spinning); if(!lastReel) return;
+    const settled = reels.filter(x => !x.spinning).map(center);
+    if(!settled.every(sym => sym === settled[0]) || !PRIZE_SYMBOLS.includes(settled[0])) return;
+    const remaining = lastReel.land ? lastReel.land.duration - ((now - t0) - lastReel.land.t0) : Infinity;
+    if(remaining < 700) return; 
+    tensionReel = lastReel; machine.classList.add("tense"); startLoop("tension", { fade:0.3 }); setLoopLevel("reelLoop", 0.2, 0.3); haptic([15, 60, 15]);
+  }
+  
+  function frame(now){
+    const dt = Math.min(50,now-last)/1000; last=now; let allDone = true;
+    reels.forEach((r,i)=>{
+      if(!r.spinning) return; allDone = false;
+      if((now-t0) < r.stopAt){
+        r.pos += r.speed * dt; r.st.style.setProperty("--mb", "1.4px");
+      }else{
+        if(!r.land){
+          const from = r.pos; let dist = ((r.target - from) % r.n + r.n) % r.n;
+          const expectedDist = (r.speed * (r.landMs / 1000)) / 3; 
+          while(dist < expectedDist - (r.n * 0.25)) dist += r.n;
+          r.land = { from, dist, t0:(now-t0), duration: (3 * dist / r.speed) * 1000 };
+        }
+        const p = Math.min(1, ((now-t0) - r.land.t0) / r.land.duration);
+        const e = 1 - Math.pow(1 - p, 3); const bounce = p > 0.72 ? Math.sin((p - 0.72) / 0.28 * Math.PI) * 0.08 * (1 - p) : 0;
+        const prevPos = r.pos; r.pos = r.land.from + r.land.dist * e + bounce; r.st.style.setProperty("--mb", (1.4 * Math.pow(1 - p, 2)).toFixed(2) + "px");
+
+        if(r === tensionReel && Math.floor(r.pos) !== Math.floor(prevPos) && now - lastTickAt > 70){
+          lastTickAt = now; sfx("tick", { jitter:0.06 });
+        }
+        
+        if(p >= 1){
+          r.pos = r.target; r.spinning = false; r.el.classList.remove("is-spinning"); r.st.style.setProperty("--mb","0px");
+          stoppedCount++; sfx("reelStop", { rate: 0.92 + stoppedCount * 0.05 }); haptic(10);
+          setLoopLevel("reelLoop", Math.max(0.2, 1 - stoppedCount * 0.2), 0.15); if(stoppedCount === 3) startTensionIfNeeded(now);
+        }
+      }
+      paint(r);
+    });
+    if(allDone){ finish(); return; }
+    schedule(frame);
+  }
+  schedule(frame);
+});
+
+function finish(){
+  stopLoop("reelLoop", 0.25); stopLoop("tension", 0.15); machine.classList.remove("tense");
+  const s = reels.map(center);
+  const winSymbol = (s[0]===s[1] && s[1]===s[2] && s[2]===s[3]) ? s[0] : null;
+  
+  if(winSymbol){
+    machine.classList.add("win"); haptic([30, 50, 30, 50, 140]);
+    if(winSymbol === "beer"){ sfx("winBeer", { delay:0.15, jitter:0 }); sfx("confetti", { delay:0.25, jitter:0 }); setTimeout(() => fireConfetti("beer"), 150); } 
+    else if(winSymbol === "free-spin"){ sfx("winFreeSpin", { delay:0.15, jitter:0 }); setTimeout(() => fireConfetti("free-spin"), 150); } 
+    else { sfx("winDiscount", { delay:0.15, jitter:0 }); setTimeout(() => fireConfetti("discount"), 150); }
+
+    // Kazançları kaydet
+    if(winSymbol === "free-spin") {
+      activeFreeSpins++;
+      // Ekranda büyük yazı çıkart (1.5sn sonra oto-spin atacak)
+      flashMessage.classList.add("show");
+      setTimeout(() => flashMessage.classList.remove("show"), 1400);
+    } else {
+      sessionRewards.push(winSymbol === 'bill' ? 'discount' : winSymbol);
+    }
+  }else{
+    const nearMiss = PRIZE_SYMBOLS.some(p => s.filter(x => x === p).length === 3);
+    sfx(nearMiss ? "nearMiss" : "lose", { delay:0.1, jitter:0.02 }); if(nearMiss) haptic([20, 40, 20]);
+  }
+
+  // 1.5 saniye bekle
+  setTimeout(() => {
+    updateUI();
+    if(activeFreeSpins > 0) {
+      // Free spin devam ediyorsa, oto spin başlat
+      spinBtn.click();
+    } else {
+      setBusy(false);
+      // Free spinler bitti (veya hiç yoktu), kazanç var mı kontrol et
+      if(sessionRewards.length > 0) {
+        showFinalModal();
+      }
+    }
+  }, 1600);
+}
+
+function showFinalModal() {
+  const counts = {};
+  sessionRewards.forEach(r => counts[r] = (counts[r]||0) + 1);
+  
+  let msg = "<strong>Bu turda toplam kazancınız:</strong><br><br>";
+  Object.keys(counts).forEach(k => {
+    msg += `<span style="color:var(--agartha-gold);font-size:1.2em;">${counts[k]}x ${REWARDS[k]||k}</span><br>`;
+  });
+
+  // Modal içerik ayarla
+  modalIcon.src = ICON("bill"); // Genel bir icon
+  modalTitle.innerText = "TEBRİKLER!";
+  modalMessage.innerHTML = msg;
+  winModal.classList.add("show");
+}
+
+modalClose.addEventListener("click", () => {
+  sfx("uiClick");
+  winModal.classList.remove("show");
+  sessionRewards = []; // Modal kapandığında geçmişi temizle
+  updateUI();
+});
+
+/* ---------- DEVELOPER PANEL INTERACTION ---------- */
+devToggleBtn.addEventListener("click", ()=>{
+  if(devPanel.classList.contains("open")) devPanel.classList.remove("open");
+  else {
+    const psw = prompt("Şifre:"); if(psw === "aek06agartha") devPanel.classList.add("open"); else if(psw !== null) alert("Hatalı şifre!");
+  }
+});
+devBypassLimit.addEventListener("change", updateUI);
+devResetSpinsBtn.addEventListener("click", ()=>{ spinsLeft = HOURLY_LIMIT; activeFreeSpins=0; sessionRewards=[]; saveSpins(); alert("Haklar 10 olarak yenilendi!"); });
+devClearStorageBtn.addEventListener("click", ()=>{ localStorage.clear(); initSpins(); alert("Sıfırlandı!"); });
+
+/* ---------- BAŞLANGIÇ ---------- */
+setInterval(updateResetTimer, 1000); updateResetTimer(); initSpins(); measure();
+
+</script>
+</body>
+</html>
+
