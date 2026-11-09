@@ -1,0 +1,1494 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14041f">
+<title>Agartha | Lucky Spin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Rubik:wght@400;500;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
+<style>
+/* =====================================================================
+   AGARTHA LUCKY SPIN — Neon Casino (indexclaude.html)
+   Renkler: kadife mor zemin, neon pembe / camgöbeği / altın ışıklar
+   ===================================================================== */
+:root{
+  --velvet:#14041f;
+  --plum:#3a0f5e;
+  --magenta:#ff2d95;
+  --cyan:#2de2ff;
+  --gold:#ffd23f;
+  --hot:#ff3b3b;
+  --cream:#fff4e0;
+  --muted:#c9b0e6;
+  --bulb-off:#3b1d52;
+  --display:"Bungee","Rubik",system-ui,sans-serif;
+  --body:"Rubik",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --ease:cubic-bezier(.22,1,.36,1);
+  --pop:cubic-bezier(.34,1.56,.64,1);
+  /* makara alanının genişliği: ekrana sığacak kadar büyük, 4x5 hücreler kareye yakın */
+  --reels-w:max(13rem, min(calc(100vw - 5.25rem), 26rem, calc((100vh - 19.5rem) * .8)));
+}
+@supports (height:100svh){
+  :root{--reels-w:max(13rem, min(calc(100vw - 5.25rem), 26rem, calc((100svh - 19.5rem) * .8)))}
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;min-height:100vh;min-height:100svh;overflow-x:hidden;
+  color:var(--cream);font-family:var(--body);
+  -webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;
+  background:
+    radial-gradient(110% 55% at 50% -8%, #6b1585 0%, #6b158500 62%),
+    radial-gradient(80% 50% at 50% 108%, #4a1080 0%, #4a108000 60%),
+    var(--velvet);
+  transition:background-color .8s;
+}
+/* casino halısı dokusu */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.55;
+  background:repeating-conic-gradient(from 45deg,#ffffff08 0 25%,#0000 0 50%) 0 0/26px 26px}
+/* bonus modunda arkada dönen ışık hüzmeleri */
+body::after{content:"";position:fixed;left:50%;top:45%;width:220vmax;height:220vmax;margin:-110vmax 0 0 -110vmax;
+  pointer-events:none;z-index:0;opacity:0;transition:opacity .8s;
+  background:repeating-conic-gradient(#ff2d9530 0 7deg,#0000 7deg 14deg);
+  animation:rot 40s linear infinite}
+body.is-bonus{background-color:#2c0540}
+body.is-bonus::after{opacity:1}
+@keyframes rot{to{transform:rotate(1turn)}}
+
+:where(button,a,input,select,[tabindex]):focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+.page{position:relative;z-index:1;min-height:100vh;min-height:100svh;
+  display:flex;flex-direction:column;align-items:center;gap:.7rem;
+  padding:max(.6rem,env(safe-area-inset-top)) 1rem max(.9rem,env(safe-area-inset-bottom))}
+.page.quake{animation:quake .6s linear}
+@keyframes quake{
+  10%,90%{transform:translate(-2px,1px)} 20%,80%{transform:translate(4px,-2px)}
+  30%,50%,70%{transform:translate(-6px,2px)} 40%,60%{transform:translate(6px,-1px)}}
+
+/* ---------------- üst bar ---------------- */
+.top{width:100%;max-width:30rem;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:.4rem}
+.top > .icon-btn{justify-self:start}
+.top-actions{display:flex;justify-content:flex-end;gap:.4rem}
+.icon-btn{width:2.5rem;height:2.5rem;border-radius:50%;display:grid;place-items:center;
+  border:1.5px solid #ffffff2e;background:#ffffff0f;color:var(--cream);
+  font:700 1rem/1 var(--body);text-decoration:none;cursor:pointer;transition:border-color .2s,background .2s}
+.icon-btn:hover{border-color:var(--gold);background:#ffd23f1f}
+.sign{margin:0;text-align:center;font-family:var(--display);font-weight:400;white-space:nowrap;
+  font-size:clamp(1rem,5.2vw,1.9rem);line-height:1;letter-spacing:.02em;color:#ffe6f3;
+  text-shadow:0 0 2px #fff,0 0 8px var(--magenta),0 0 18px var(--magenta),0 0 38px #ff2d9599;
+  animation:flicker 9s infinite}
+@keyframes flicker{0%,90%,100%{opacity:1}91%{opacity:.35}92%{opacity:1}94%{opacity:.6}95%{opacity:1}}
+
+/* ---------------- hak / süre göstergesi ---------------- */
+.hud,.bonus-hud{width:100%;max-width:calc(var(--reels-w) + 3.4rem)}
+.hud{display:flex;justify-content:space-between;gap:.5rem}
+.hud-block{display:flex;align-items:center;gap:.5rem;padding:.35rem .8rem;border-radius:999px;
+  background:#0000004f;border:1px solid #ffffff1f}
+.hud-label{font-size:.78rem;color:var(--muted)}
+.hud-num{font-family:var(--display);font-size:1.05rem;line-height:1;color:var(--gold);
+  font-variant-numeric:tabular-nums;text-shadow:0 0 10px #ffd23f80}
+.pips{display:flex;gap:3px}
+.pip{width:7px;height:7px;border-radius:50%;background:#ffffff1f;transition:background .3s,box-shadow .3s}
+.pip.on{background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+.pip.spent{animation:pipOut .5s ease-out}
+@keyframes pipOut{0%{transform:scale(1.9);background:#fff;box-shadow:0 0 10px #fff}}
+
+.bonus-hud{display:flex;align-items:center;justify-content:space-between;gap:.6rem;
+  padding:.35rem .45rem .35rem .9rem;border-radius:16px;
+  background:linear-gradient(100deg,var(--magenta),#8a2cff);
+  box-shadow:0 0 0 2px var(--gold),0 0 28px #ff2d95a0;animation:hudIn .55s var(--pop)}
+@keyframes hudIn{from{transform:scale(.6);opacity:0}}
+.bonus-count{display:flex;align-items:baseline;gap:.45rem;font-family:var(--display);color:#fff;white-space:nowrap;font-size:.95rem}
+.bonus-count .hud-num{color:#fff;font-size:1.25rem;text-shadow:0 0 10px #fff9}
+.stash{display:flex;gap:.3rem;flex-wrap:wrap;justify-content:flex-end;align-items:center;min-height:2.3rem}
+.stash-empty{font-size:.75rem;color:#ffe3f1;padding-right:.4rem}
+.stash-item{display:flex;align-items:center;gap:.15rem;padding:.12rem .5rem .12rem .15rem;border-radius:999px;
+  background:#2c0540d9;border:1px solid #ffd23f99;font-family:var(--display);font-size:.85rem;color:var(--gold)}
+.stash-item img{width:1.9rem;height:1.9rem;object-fit:contain}
+.stash-item.pop{animation:pop .55s var(--pop)}
+@keyframes pop{0%{transform:scale(.3)}60%{transform:scale(1.25)}}
+
+/* ==================== KABİN ==================== */
+.cabinet{position:relative;padding:20px;border-radius:26px;
+  background:linear-gradient(160deg,#4d1574,#23073c 45%,#170429);
+  box-shadow:inset 0 0 0 2px #ffd23f4d,0 0 0 1px #000,0 22px 50px #000b,0 0 60px #ff2d9530}
+.cabinet.kick{animation:kick .45s ease-out}
+@keyframes kick{20%{transform:rotate(-2deg) scale(1.02)}45%{transform:rotate(1.6deg)}70%{transform:rotate(-.8deg)}}
+
+/* --- marquee ampulleri: oyunun durumuna göre yanıp söner --- */
+.bulbs{position:absolute;inset:0;pointer-events:none;border-radius:inherit}
+.bulb{--on:var(--gold);position:absolute;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;
+  background:var(--bulb-off);box-shadow:inset 0 -1px 2px #0007}
+.bulb:nth-child(odd){--on2:var(--cyan)}
+.bulb:nth-child(even){--on2:var(--magenta)}
+@keyframes chase{0%{background:var(--on);box-shadow:0 0 7px 1px var(--on)}50%{background:var(--bulb-off);box-shadow:inset 0 -1px 2px #0007}}
+@keyframes blink2{0%{background:var(--on);box-shadow:0 0 9px 2px var(--on)}50%{background:#fff;box-shadow:0 0 12px 3px #fff}}
+.cabinet[data-mode="idle"] .bulb{animation:chase 1.6s steps(1,end) infinite;animation-delay:calc(var(--i) * -.2s)}
+.cabinet[data-mode="spin"] .bulb{--on:var(--on2);animation:chase .42s steps(1,end) infinite;animation-delay:calc(var(--i) * -.06s)}
+.cabinet[data-mode="tense"] .bulb{--on:var(--hot);animation:chase .18s steps(1,end) infinite}
+.cabinet[data-mode="near"] .bulb{--on:var(--hot);animation:chase .5s steps(1,end) 2}
+.cabinet[data-mode="win"] .bulb{animation:blink2 .24s steps(1,end) infinite}
+.cabinet[data-mode="off"] .bulb{animation:none}
+body.is-bonus .cabinet[data-mode="idle"] .bulb{--on:var(--on2)}
+
+/* --- makara penceresi --- */
+.window{position:relative;border-radius:14px;padding:6px;background:#07010d;
+  box-shadow:inset 0 0 0 2px #000,inset 0 0 30px #000,0 0 0 3px var(--gold),0 0 20px #ffd23f66;
+  transition:box-shadow .3s}
+.cabinet[data-mode="tense"] .window{animation:tenseGlow .5s ease-in-out infinite}
+@keyframes tenseGlow{50%{box-shadow:inset 0 0 0 2px #000,inset 0 0 30px #000,0 0 0 3px var(--hot),0 0 34px var(--hot)}}
+body.is-bonus .window{box-shadow:inset 0 0 0 2px #000,inset 0 0 30px #000,0 0 0 3px var(--magenta),0 0 26px #ff2d95aa}
+
+.reels{position:relative;display:flex;gap:4px;width:var(--reels-w)}
+.reel{flex:1;min-width:0;position:relative;overflow:hidden;aspect-ratio:1 / 5;border-radius:8px;
+  background:linear-gradient(90deg,#1b0a29,#2d1446 50%,#1b0a29);transition:box-shadow .2s}
+/* silindir gölgesi */
+.reel::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:3;
+  background:linear-gradient(#000000c0 0%,#0000 13%,#0000 87%,#000000c0 100%)}
+/* durduğu an kısa beyaz parlama */
+.reel::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:4;background:#fff;opacity:0}
+.reel.landed::before{animation:flash .35s ease-out}
+@keyframes flash{0%{opacity:.35}100%{opacity:0}}
+.reel.anticipate{z-index:2;box-shadow:0 0 0 2px var(--hot),0 0 22px 4px var(--hot);animation:antic .3s steps(2,end) infinite}
+@keyframes antic{50%{box-shadow:0 0 0 2px var(--gold),0 0 30px 6px var(--gold)}}
+
+.strip{position:absolute;left:0;right:0;top:0;will-change:transform;filter:blur(var(--mb,0px))}
+.cell{display:flex;align-items:center;justify-content:center;position:relative}
+.cell img{width:76%;height:76%;object-fit:contain;display:block;user-select:none;pointer-events:none;
+  transition:opacity .3s,filter .3s,transform .3s}
+.reel.is-spinning .cell img{transition:none}
+.cabinet.has-win .cell:not(.is-win) img{opacity:.25;filter:grayscale(.75) brightness(.7)}
+.cell.is-win{background:radial-gradient(circle,#ffd23f45,#0000 68%)}
+.cell.is-win img{animation:winpulse .8s ease-in-out infinite}
+@keyframes winpulse{
+  0%,100%{transform:scale(1.05);filter:drop-shadow(0 0 6px var(--gold)) brightness(1.15)}
+  50%{transform:scale(1.22);filter:drop-shadow(0 0 16px var(--gold)) brightness(1.4)}}
+
+/* kazanan çizgi (neon tüp: altta pembe kalın, üstte altın ince) */
+.win-lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:6;overflow:visible}
+.win-line{fill:none;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:drawline .55s var(--ease) forwards}
+.win-line.under{stroke:var(--magenta);stroke-width:10;opacity:.55;filter:blur(2px)}
+.win-line.over{stroke:#fff6c8;stroke-width:3.5;filter:drop-shadow(0 0 5px var(--gold))}
+@keyframes drawline{to{stroke-dashoffset:0}}
+
+/* pencere içi büyük uyarı yazısı (KIL PAYI! vb.) */
+.callout{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;z-index:8}
+.callout span{font-family:var(--display);font-size:clamp(1.8rem,9vw,2.9rem);line-height:1;white-space:nowrap;
+  color:#fff;padding:.25em .55em;border-radius:14px;background:#0a0012d9;
+  border:2px solid var(--c,var(--hot));box-shadow:0 0 24px var(--c,var(--hot));
+  text-shadow:0 0 12px var(--c,var(--hot));opacity:0;transform:scale(.4) rotate(-6deg)}
+.callout.show span{animation:calloutIn 1.25s var(--pop) forwards}
+@keyframes calloutIn{
+  0%{opacity:0;transform:scale(.4) rotate(-6deg)}
+  25%{opacity:1;transform:scale(1.08) rotate(-4deg)}
+  80%{opacity:1;transform:scale(1) rotate(-4deg)}
+  100%{opacity:0;transform:scale(.95) rotate(-4deg)}}
+
+/* ==================== ÇEVİR BUTONU + SALLAMA HALKASI ==================== */
+.controls{display:flex;flex-direction:column;align-items:center;gap:.55rem;margin-top:.35rem}
+.spin-btn{--energy:0;position:relative;width:5.6rem;height:5.6rem;border-radius:50%;border:0;padding:0;
+  background:none;cursor:pointer;touch-action:manipulation}
+.spin-ring{position:absolute;inset:-8px;border-radius:50%;
+  background:conic-gradient(var(--cyan) calc(var(--energy) * 1turn),#ffffff1c 0);
+  -webkit-mask:radial-gradient(farthest-side,#0000 calc(100% - 5px),#000 calc(100% - 4px));
+          mask:radial-gradient(farthest-side,#0000 calc(100% - 5px),#000 calc(100% - 4px));
+  filter:drop-shadow(0 0 6px var(--cyan))}
+.spin-face{position:absolute;inset:0;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.15rem;
+  background:radial-gradient(circle at 50% 28%,#ff8ac8,var(--magenta) 45%,#a3005a);
+  box-shadow:0 6px 0 #6a0040,0 12px 26px #000b,0 0 34px #ff2d958c,inset 0 4px 10px #ffffff70;
+  transition:transform .1s,box-shadow .1s,filter .3s}
+.spin-label{font-family:var(--display);font-size:1.2rem;line-height:1;color:#fff;text-shadow:0 2px 0 #7a0048}
+.spin-sub{font-size:.68rem;font-weight:500;color:#ffe6f3}
+.spin-sub:empty{display:none}
+.spin-btn:active:not(:disabled) .spin-face{transform:translateY(5px);box-shadow:0 1px 0 #6a0040,0 4px 10px #000b,0 0 20px #ff2d958c,inset 0 4px 10px #ffffff70}
+.spin-btn.ready .spin-face{animation:breathe 1.8s ease-in-out infinite}
+@keyframes breathe{50%{box-shadow:0 6px 0 #6a0040,0 12px 26px #000b,0 0 56px #ff2d95d0,inset 0 4px 10px #ffffff70}}
+.spin-btn:disabled{cursor:default}
+.spin-btn:disabled:not(.bonus):not(.out) .spin-face{filter:saturate(.55) brightness(.75)}
+.spin-btn.bonus .spin-face{background:radial-gradient(circle at 50% 28%,#fff3b0,var(--gold) 45%,#c77d00);box-shadow:0 6px 0 #7a4a00,0 12px 26px #000b,0 0 40px #ffd23fa0,inset 0 4px 10px #ffffff90}
+.spin-btn.bonus .spin-label{color:#5a1200;text-shadow:none}
+.spin-btn.bonus .spin-sub{color:#5a1200}
+.spin-btn.bonus .spin-ring{background:conic-gradient(var(--gold) calc(var(--energy) * 1turn),#ffffff1c 0);filter:drop-shadow(0 0 6px var(--gold))}
+.spin-btn.out .spin-face{background:radial-gradient(circle at 50% 28%,#6a5a80,#3b2a52 55%,#21142f);box-shadow:0 6px 0 #160c22,0 12px 26px #000b,inset 0 3px 8px #ffffff30}
+.spin-btn.out .spin-label{font-size:1.05rem;color:var(--gold);text-shadow:0 0 8px #ffd23f80}
+.spin-btn.nudge{animation:nudge .4s}
+@keyframes nudge{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+
+.hint{margin:0;font-size:.85rem;color:var(--muted);text-align:center;min-height:1.2em}
+.hint.live::before{content:"📳";display:inline-block;margin-right:.35rem;animation:wobble 1.6s ease-in-out infinite}
+@keyframes wobble{0%,60%,100%{transform:rotate(0)}10%,30%,50%{transform:rotate(-16deg)}20%,40%{transform:rotate(16deg)}}
+.motion-chip{border:1.5px solid var(--cyan);background:#2de2ff1a;color:var(--cyan);border-radius:999px;
+  padding:.5rem 1rem;font:500 .85rem var(--body);cursor:pointer;box-shadow:0 0 14px #2de2ff55}
+
+/* ==================== BÜYÜK KAZANÇ EKRANI ==================== */
+.bigwin{position:fixed;inset:0;z-index:50;display:grid;place-items:center;overflow:hidden;
+  background:radial-gradient(circle,#3a0f5ee0,#0a0012f5 70%);opacity:0;pointer-events:none;transition:opacity .25s}
+.bigwin.show{opacity:1;pointer-events:auto}
+.rays{position:absolute;left:50%;top:50%;width:170vmax;height:170vmax;margin:-85vmax 0 0 -85vmax;
+  background:repeating-conic-gradient(#ffd23f33 0 9deg,#0000 9deg 18deg);
+  -webkit-mask:radial-gradient(circle,#000 0 12%,#0000 58%);mask:radial-gradient(circle,#000 0 12%,#0000 58%);
+  animation:rot 12s linear infinite}
+.bigwin.mega .rays{background:repeating-conic-gradient(#ffd23f55 0 7deg,#ff2d9533 7deg 14deg,#0000 14deg 21deg);animation-duration:6s}
+.bw-card{position:relative;text-align:center;padding:1rem;transform:scale(.25);transition:transform .6s var(--pop)}
+.bigwin.show .bw-card{transform:scale(1)}
+.bw-icon{width:min(44vw,11rem);height:min(44vw,11rem);object-fit:contain;filter:drop-shadow(0 0 30px var(--gold));animation:bob 1.2s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-8px) rotate(3deg)}}
+.bw-title{font-family:var(--display);font-size:clamp(2.3rem,12vw,4.4rem);line-height:.95;margin:.6rem 0 .5rem;
+  color:var(--gold);transform:rotate(-4deg);
+  text-shadow:0 3px 0 var(--magenta),0 6px 0 #7a2cff,0 0 34px #ffd23fa0}
+.bigwin.mega .bw-title{animation:titleFlash .3s steps(2,end) 8}
+@keyframes titleFlash{50%{color:#fff}}
+.bw-sub{font-size:1rem;color:var(--cream)}
+
+/* ==================== MODAL (özet / kurallar) ==================== */
+.sheet{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:1rem;
+  background:#0a0012e0;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  opacity:0;pointer-events:none;transition:opacity .25s}
+.sheet.show{opacity:1;pointer-events:auto}
+.sheet-card{position:relative;width:min(100%,24rem);max-height:calc(100svh - 2rem);overflow:auto;
+  border-radius:22px;padding:1.6rem 1.3rem 1.3rem;text-align:center;
+  background:linear-gradient(170deg,#45136e,#1c0630);
+  box-shadow:0 0 0 2px var(--gold),0 0 44px #ffd23f55,0 30px 60px #000;
+  transform:translateY(24px) scale(.92);transition:transform .5s var(--pop)}
+.sheet.show .sheet-card{transform:none}
+.sheet-title{font-family:var(--display);font-weight:400;margin:0 0 1rem;font-size:2.1rem;line-height:1;color:var(--gold);
+  text-shadow:0 3px 0 var(--magenta),0 0 24px #ffd23f88}
+.sheet-title.small{font-size:1.6rem}
+.sum-list{list-style:none;margin:0 0 1.1rem;padding:0;display:flex;flex-direction:column;gap:.5rem}
+.sum-list li{display:flex;align-items:center;gap:.7rem;padding:.45rem .8rem .45rem .45rem;border-radius:14px;background:#0000004d;border:1px solid #ffd23f55;text-align:left}
+.sum-list img{width:3.2rem;height:3.2rem;object-fit:contain;filter:drop-shadow(0 0 10px #ffd23f88)}
+.sum-n{font-family:var(--display);font-size:1.5rem;color:var(--gold);min-width:2.4rem}
+.sum-item{font-size:1.1rem;font-weight:700}
+.sum-note{margin:0 0 .2rem;font-size:.95rem}
+.sum-time{margin:0 0 1.2rem;font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.cta{width:100%;border:0;border-radius:14px;padding:1rem;cursor:pointer;
+  font-family:var(--display);font-size:1.15rem;color:#3a1500;
+  background:linear-gradient(#fff1a8,var(--gold) 50%,#f0a800);
+  box-shadow:0 5px 0 #9a6200,0 0 24px #ffd23f88;transition:transform .1s,box-shadow .1s}
+.cta:active{transform:translateY(4px);box-shadow:0 1px 0 #9a6200,0 0 18px #ffd23f88}
+.cta.ghost{background:#ffffff14;color:var(--cream);box-shadow:inset 0 0 0 1.5px #ffffff40;font-size:1rem}
+
+.pay-list{list-style:none;margin:0 0 1.2rem;padding:0;display:flex;flex-direction:column;gap:.45rem}
+.pay-list li{display:flex;align-items:center;justify-content:space-between;gap:.6rem;padding:.4rem .7rem .4rem .4rem;border-radius:12px;background:#0000004d}
+.pay-icons{display:flex}
+.pay-icons img{width:1.85rem;height:1.85rem;object-fit:contain;margin-right:-.3rem}
+.pay-prize{font-weight:700;text-align:right;font-size:.95rem}
+.sheet-sub{margin:0 0 .6rem;font-size:.95rem;font-weight:500;color:var(--muted)}
+.line-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(3.4rem,1fr));gap:.4rem;margin-bottom:1rem}
+.line-grid figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:.15rem}
+.line-grid svg{width:2.6rem;height:3.25rem;background:#0000004d;border-radius:6px}
+.line-grid figcaption{font-size:.62rem;color:var(--muted);line-height:1.1}
+.rules-text{margin:0 0 1.1rem;font-size:.85rem;line-height:1.5;color:var(--cream);text-align:left}
+
+/* emoji yağmuru (bira / indirim kazanınca) */
+.emoji-rain{position:fixed;inset:0;z-index:71;pointer-events:none;overflow:hidden}
+.emoji-rain span{position:absolute;top:-3.5rem;font-size:var(--s);line-height:1;
+  animation:emojiFall var(--d) cubic-bezier(.3,.1,.6,1) var(--dl) both;will-change:transform}
+@keyframes emojiFall{
+  from{transform:translate(0,0) rotate(0)}
+  to{transform:translate(var(--dx),calc(100vh + 7rem)) rotate(var(--r))}}
+
+/* uçan ödül ikonu (bonus kasasına) */
+.flyer{position:fixed;z-index:45;pointer-events:none;object-fit:contain;filter:drop-shadow(0 0 14px var(--gold))}
+
+/* ==================== GELİŞTİRİCİ PANELİ ==================== */
+.foot{margin-top:auto;padding-top:1rem}
+.dev-link{background:none;border:0;color:#ffffff40;font:.72rem var(--body);cursor:pointer}
+.dev-link:hover{color:var(--muted)}
+.dev-panel{width:100%;max-width:34rem;background:#0d0216;border:1px dashed var(--magenta);border-radius:12px;
+  padding:1rem;font-size:.82rem;display:flex;flex-direction:column;gap:.8rem}
+.dev-panel h4{margin:0;color:var(--magenta);font-size:.95rem}
+.dev-group{display:flex;flex-direction:column;gap:.35rem}
+.dev-group > label{color:var(--muted)}
+.dev-check{display:flex;align-items:center;gap:.45rem;color:var(--cream)}
+.dev-panel select,.dev-panel button,.dev-panel input[type=number]{background:#1f0b2e;border:1px solid #4a2a63;color:var(--cream);
+  padding:.45rem .6rem;border-radius:6px;font:inherit}
+.dev-panel button{cursor:pointer}
+.dev-panel button:hover{border-color:var(--gold);color:var(--gold)}
+.dev-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem}
+.dev-grid label{display:flex;align-items:center;gap:.35rem;color:var(--muted)}
+.dev-grid input{width:5rem}
+.dev-row{display:flex;flex-wrap:wrap;gap:.45rem}
+.dev-motion,.dev-status{margin:0;color:var(--muted);font-variant-numeric:tabular-nums}
+.sound-test{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.35rem}
+.sound-test button{text-align:left}
+.sound-test button.missing{opacity:.4;cursor:not-allowed}
+.sound-test button.on{border-color:var(--gold);color:var(--gold)}
+
+/* dar telefonlar */
+@media (max-width:400px){
+  .pip{width:5px;height:5px}
+  .pips{gap:2px}
+  .hud-block{padding:.3rem .6rem;gap:.35rem}
+  .hud-label{font-size:.7rem}
+  .icon-btn{width:2.25rem;height:2.25rem;font-size:.9rem}
+}
+@media (max-width:350px){
+  .pips{display:none}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .bulb{animation:none !important;background:var(--on) !important}
+  .cabinet[data-mode="off"] .bulb{background:var(--bulb-off) !important}
+  body::after,.rays,.sign,.bw-icon,.hint.live::before,.spin-btn.ready .spin-face{animation:none !important}
+  .page.quake,.cabinet.kick{animation:none}
+  .cell.is-win img{animation:none;transform:scale(1.12)}
+}
+</style>
+</head>
+<body>
+<div class="page" id="page">
+  <header class="top">
+    <a class="icon-btn" href="#" aria-label="Ana sayfaya dön">&larr;</a>
+    <h1 class="sign">Lucky Spin</h1>
+    <div class="top-actions">
+      <button class="icon-btn" id="infoBtn" type="button" aria-label="Ödüller ve kurallar">?</button>
+      <button class="icon-btn" id="soundToggle" type="button" aria-pressed="true" aria-label="Sesi kapat">🔊</button>
+    </div>
+  </header>
+
+  <div class="hud" id="hud">
+    <div class="hud-block">
+      <span class="hud-label">Hak</span>
+      <span class="pips" id="pips" aria-hidden="true"></span>
+      <span class="hud-num" id="spinsNum">10</span>
+    </div>
+    <div class="hud-block">
+      <span class="hud-label">Yenilenme</span>
+      <span class="hud-num" id="timer">--:--</span>
+    </div>
+  </div>
+
+  <div class="bonus-hud" id="bonusHud" hidden>
+    <div class="bonus-count">Free spin <span class="hud-num"><span id="fsNow">0</span>/<span id="fsTotal">0</span></span></div>
+    <div class="stash" id="stash" aria-label="Bonus kasası"></div>
+  </div>
+
+  <section class="cabinet" id="cabinet" data-mode="idle" aria-label="Slot makinesi">
+    <div class="bulbs" id="bulbs" aria-hidden="true"></div>
+    <div class="window">
+      <div class="reels" id="reels">
+        <svg class="win-lines" id="winLines" aria-hidden="true"></svg>
+      </div>
+      <div class="callout" id="callout" aria-hidden="true"><span id="calloutText"></span></div>
+    </div>
+  </section>
+
+  <div class="controls">
+    <button class="spin-btn ready" id="spinBtn" type="button" aria-label="Çevir">
+      <span class="spin-ring" aria-hidden="true"></span>
+      <span class="spin-face"><span class="spin-label" id="spinLabel">Çevir</span><span class="spin-sub" id="spinSub"></span></span>
+    </button>
+    <p class="hint" id="hint"></p>
+    <button class="motion-chip" id="motionChip" type="button" hidden>📳 Sallayarak çevirmeyi aç</button>
+  </div>
+
+  <footer class="foot"><button class="dev-link" id="devToggleBtn" type="button">Geliştirici</button></footer>
+
+  <!-- GELİŞTİRİCİ TEST PANELİ -->
+  <div class="dev-panel" id="devPanel" hidden>
+    <h4>🛠️ Geliştirici test modu</h4>
+    <label class="dev-check"><input type="checkbox" id="devBypassLimit"> Sınırsız hak (saatlik sınırı kapat)</label>
+    <div class="dev-group">
+      <label for="devForceResult">Sonraki spin sonucu</label>
+      <select id="devForceResult">
+        <option value="auto">Otomatik (aşağıdaki oranlara göre)</option>
+        <option value="beer">Bedava bira</option>
+        <option value="bill">%30 indirim</option>
+        <option value="free-spin">Free spin</option>
+        <option value="near-miss">Kıl payı kaçır</option>
+        <option value="lose">Kaybet</option>
+      </select>
+      <label class="dev-check"><input type="checkbox" id="devSticky"> Her spinde uygula (işaretsizse sadece bir kez)</label>
+    </div>
+    <div class="dev-group">
+      <label for="devForceLine">Kazanç çizgisi</label>
+      <select id="devForceLine"><option value="auto">Rastgele</option></select>
+    </div>
+    <div class="dev-grid">
+      <label>Bira 1/<input type="number" id="oddBeer" min="1" step="1"></label>
+      <label>İndirim 1/<input type="number" id="oddBill" min="1" step="1"></label>
+      <label>Free spin 1/<input type="number" id="oddFree" min="1" step="1"></label>
+      <label>Free spin adedi <input type="number" id="freeCount" min="1" max="10" step="1"></label>
+    </div>
+    <div class="dev-group">
+      <label for="shakeSens">Sallama hassasiyeti: <output id="shakeSensOut"></output></label>
+      <input type="range" id="shakeSens" min="0.5" max="2" step="0.1">
+    </div>
+    <p class="dev-motion" id="devMotion">Hareket sensörü: veri bekleniyor</p>
+    <div class="dev-row">
+      <button type="button" id="devShake">Sallamayı simüle et</button>
+      <button type="button" id="devBonusDemo">Bonus demosu</button>
+      <button type="button" id="devResetSpinsBtn">Hakları 10 yap</button>
+      <button type="button" id="devClearStorageBtn">Hafızayı sıfırla</button>
+    </div>
+    <div class="dev-group">
+      <label>Ses testi (✔ yüklendi · ✖ dosya yok · ⟳ döngü)</label>
+      <div class="sound-test" id="soundTest"></div>
+    </div>
+    <p class="dev-status" id="devStatus"></p>
+  </div>
+</div>
+
+<!-- BÜYÜK KAZANÇ EKRANI -->
+<div class="bigwin" id="bigwin" aria-hidden="true">
+  <div class="rays"></div>
+  <div class="bw-card">
+    <img class="bw-icon" id="bwIcon" alt="">
+    <div class="bw-title" id="bwTitle"></div>
+    <div class="bw-sub" id="bwSub"></div>
+  </div>
+</div>
+
+<!-- KAZANÇ ÖZETİ -->
+<div class="sheet" id="summary" role="dialog" aria-modal="true" aria-labelledby="sumTitle" aria-hidden="true">
+  <div class="sheet-card">
+    <h2 class="sheet-title" id="sumTitle">Kazandın!</h2>
+    <ul class="sum-list" id="sumList"></ul>
+    <p class="sum-note">Bu ekranı garsona göster.</p>
+    <p class="sum-time" id="sumTime"></p>
+    <button class="cta" id="sumClose" type="button">Kazancı al</button>
+  </div>
+</div>
+
+<!-- ÖDÜLLER / KURALLAR -->
+<div class="sheet" id="rules" role="dialog" aria-modal="true" aria-labelledby="rulesTitle" aria-hidden="true">
+  <div class="sheet-card">
+    <h2 class="sheet-title small" id="rulesTitle">Ödüller</h2>
+    <ul class="pay-list" id="payList"></ul>
+    <h3 class="sheet-sub" id="linesTitle">Kazanç çizgileri</h3>
+    <div class="line-grid" id="lineGrid"></div>
+    <p class="rules-text" id="rulesText"></p>
+    <button class="cta ghost" id="rulesClose" type="button">Kapat</button>
+  </div>
+</div>
+
+<div class="sr-only" aria-live="polite" id="live"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* =====================================================================
+   AYARLAR — oranlar ve davranış buradan değiştirilir
+   ===================================================================== */
+const CONFIG = {
+  HOURLY_LIMIT: 10,
+  // Her spin için kazanma ihtimali: 1/N
+  ODDS: { beer: 600, bill: 300, "free-spin": 20 },   // free spin: eskiden 1/200, şimdi 1/20
+  FREE_SPINS_PER_TRIGGER: 3,      // 4 free spin simgesi = kaç OTOMATİK çevirme (1 yaparsan eski "+1 hak" gibi olur)
+  MAX_FREE_SPINS_PER_ROUND: 30,   // sonsuz zincire karşı güvenlik sınırı
+  NEAR_MISS_RATE: 0.08,           // kaybeden spinlerin ne kadarı "kıl payı" görünsün
+  SHAKE_SENSITIVITY: 1,           // 0.5 = sert sallamak gerekir · 2 = hafif sallama yeter
+  TURBO_IN_BONUS: true            // free spinlerde makaralar daha çabuk durur
+};
+
+const REELS = 4, ROWS = 5, MID = 2;   // 4 makara x 5 satır, makaranın "merkez" satırı = 2
+const SPEED = 44;                     // dönüş hızı (hücre/saniye)
+const BACK = 0.8;                     // duruşta küçük geri sekme miktarı
+const MB = 1.6;                       // dönüşte hareket bulanıklığı (px)
+const PASSWORD = "aek06agartha";
+
+/* ---------- SİMGELER (index4 ile aynı şeritler) ---------- */
+const STRIPS = [
+ "logo.bill.free-spin.vodka-energy.vodka-energy.free-spin.gin-tonic.gin-tonic.free-spin.cocktail.cocktail.free-spin.cocktail.pizza.free-spin.pizza.pizza.shot.free-spin.shot.shot.free-spin.shot.beer.free-spin.beer.beer.free-spin.beer.beer.free-spin.beer".split("."),
+ "logo.bill.free-spin.bill.vodka-energy.free-spin.vodka-energy.gin-tonic.free-spin.gin-tonic.cocktail.free-spin.cocktail.cocktail.free-spin.pizza.pizza.pizza.free-spin.shot.shot.free-spin.shot.shot.free-spin.beer.beer.free-spin.beer.beer.free-spin.beer".split("."),
+ "logo.bill.free-spin.vodka-energy.vodka-energy.free-spin.gin-tonic.gin-tonic.free-spin.cocktail.cocktail.free-spin.cocktail.pizza.free-spin.pizza.pizza.pizza.free-spin.shot.shot.free-spin.shot.shot.free-spin.beer.beer.free-spin.beer.beer.free-spin.beer".split("."),
+ "logo.bill.free-spin.bill.vodka-energy.free-spin.vodka-energy.gin-tonic.free-spin.gin-tonic.cocktail.free-spin.cocktail.cocktail.free-spin.pizza.pizza.pizza.free-spin.shot.shot.free-spin.shot.shot.free-spin.beer.beer.free-spin.beer.beer.free-spin.beer".split(".")
+];
+const ICON = id => `./drinks/${id}.png`;
+const LABEL = {logo:"Agartha",bill:"Hesap",beer:"Bira",shot:"Shot",cocktail:"Kokteyl",
+  pizza:"Pizza","vodka-energy":"Vodka & Energy","gin-tonic":"Gin & Tonic","free-spin":"Free Spin"};
+
+// değer sırası: aynı anda birden fazla ödül görünürse en değerlisi sayılır
+const PRIZE_SYMBOLS = ["beer", "bill", "free-spin"];
+// gerilim (son makara yavaşlar, ampuller kırmızı yanar) sadece değerli ödüllerde
+const TENSION_SYMBOLS = ["beer", "bill"];
+const PRIZES = {
+  beer:        { title:"BEDAVA BİRA!", item:"Bedava bira", noun:"bira" },
+  bill:        { title:"%30 İNDİRİM!", item:"%30 indirim", noun:"hesap" },
+  "free-spin": { title:"FREE SPIN!",   item:"Free spin",   noun:"free spin" }
+};
+
+/* 4x5 ızgara için kazanç çizgileri (satır: 0 en üst … 4 en alt), soldan sağa 4 makara */
+const PAYLINES = [
+  { id:"r2", name:"Orta",      where:"Orta satırda",     rows:[2,2,2,2] },
+  { id:"r1", name:"Üst",       where:"Üst satırda",      rows:[1,1,1,1] },
+  { id:"r3", name:"Alt",       where:"Alt satırda",      rows:[3,3,3,3] },
+  { id:"r0", name:"En üst",    where:"En üst satırda",   rows:[0,0,0,0] },
+  { id:"r4", name:"En alt",    where:"En alt satırda",   rows:[4,4,4,4] },
+  { id:"v",  name:"V",         where:"V çizgisinde",     rows:[1,2,2,1] },
+  { id:"a",  name:"Λ",         where:"Λ çizgisinde",     rows:[3,2,2,3] },
+  { id:"dd", name:"İnen",      where:"İnen çaprazda",    rows:[0,1,2,3] },
+  { id:"du", name:"Çıkan",     where:"Çıkan çaprazda",   rows:[4,3,2,1] }
+];
+
+/* ---------- küçük yardımcılar ---------- */
+const $ = id => document.getElementById(id);
+const rand = n => Math.floor(Math.random() * n);
+const pick = arr => arr[rand(arr.length)];
+const mod = (a, n) => ((a % n) + n) % n;
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+const isTouch = window.matchMedia && matchMedia("(pointer: coarse)").matches;
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+  set(k, v){ try { localStorage.setItem(k, v); } catch(e){} },
+  del(k){ try { localStorage.removeItem(k); } catch(e){} },
+  clear(){ try { localStorage.clear(); } catch(e){} }
+};
+
+/* =====================================================================
+   KAZANÇ MANTIĞI (saf fonksiyonlar)
+   Her makaranın "idx" değeri ORTA satırdaki (satır 2) simgenin şerit indeksi.
+   ===================================================================== */
+function symAt(i, idx, row){ const s = STRIPS[i]; return s[mod(idx + row - MID, s.length)]; }
+
+function winningLines(idxs){
+  return PAYLINES.map(line => {
+    const syms = line.rows.map((row, i) => symAt(i, idxs[i], row));
+    return syms.every(x => x === syms[0]) ? { line, symbol: syms[0] } : null;
+  }).filter(Boolean);
+}
+function idxOptions(i, row, symbol){
+  const s = STRIPS[i], out = [];
+  s.forEach((sym, k) => { if(sym === symbol) out.push(mod(k - (row - MID), s.length)); });
+  return out;
+}
+const linePool = id => (id && id !== "auto") ? PAYLINES.filter(l => l.id === id) : PAYLINES;
+
+// KAZANÇ: seçilen çizgide 4 aynı simge; mümkünse başka hiçbir çizgi kazanmasın
+function buildWinTargets(symbol, forcedLine){
+  let last = null;
+  for(let a = 0; a < 600; a++){
+    const line = pick(linePool(forcedLine));
+    const idxs = line.rows.map((row, i) => pick(idxOptions(i, row, symbol)));
+    last = { idxs, line };
+    const wins = winningLines(idxs);
+    const strict = a < 450;
+    if(wins.length && wins.every(w => w.symbol === symbol) && (!strict || wins.length === 1)) return last;
+  }
+  return last;
+}
+// KAYIP: hiçbir çizgide (hiçbir simgeyle) 4'lü yok
+function buildLoseTargets(){
+  for(let a = 0; a < 800; a++){
+    const idxs = STRIPS.map(s => rand(s.length));
+    if(winningLines(idxs).length === 0) return idxs;
+  }
+  return STRIPS.map(s => rand(s.length));
+}
+// KIL PAYI: bir çizgide ilk 3 makara aynı ödül, son makara ıskalar (tercihen simge hemen üstünde/altında)
+function buildNearMissTargets(missReel, tease, forcedLine){
+  for(let a = 0; a < 600; a++){
+    const line = pick(linePool(forcedLine));
+    const idxs = line.rows.map((row, i) => {
+      if(i !== missReel) return pick(idxOptions(i, row, tease));
+      const n = STRIPS[i].length, all = [], close = [];
+      for(let c = 0; c < n; c++){
+        if(symAt(i, c, row) === tease) continue;
+        all.push(c);
+        if((row > 0 && symAt(i, c, row - 1) === tease) || (row < ROWS - 1 && symAt(i, c, row + 1) === tease)) close.push(c);
+      }
+      return pick(close.length ? close : all);
+    });
+    if(winningLines(idxs).length === 0) return { idxs, line };
+  }
+  return { idxs: buildLoseTargets(), line: null };
+}
+// ilk makaralar durduğunda: bir çizgide hepsi aynı DEĞERLİ ödül mü?
+function tensionSymbol(settled){
+  const found = new Set();
+  PAYLINES.forEach(line => {
+    const syms = settled.map(({ i, idx }) => symAt(i, idx, line.rows[i]));
+    if(syms.length && syms.every(x => x === syms[0]) && TENSION_SYMBOLS.includes(syms[0])) found.add(syms[0]);
+  });
+  return TENSION_SYMBOLS.find(s => found.has(s)) || null;
+}
+
+/* =====================================================================
+   DOM
+   ===================================================================== */
+const page = $("page"), cabinet = $("cabinet"), bulbsEl = $("bulbs"), reelsEl = $("reels"), winLinesEl = $("winLines");
+const spinBtn = $("spinBtn"), spinLabel = $("spinLabel"), spinSub = $("spinSub"), hintEl = $("hint"), motionChip = $("motionChip");
+const hud = $("hud"), pipsEl = $("pips"), spinsNum = $("spinsNum"), timerEl = $("timer");
+const bonusHud = $("bonusHud"), fsNow = $("fsNow"), fsTotal = $("fsTotal"), stashEl = $("stash");
+const calloutEl = $("callout"), calloutText = $("calloutText");
+const bigwin = $("bigwin"), bwIcon = $("bwIcon"), bwTitle = $("bwTitle"), bwSub = $("bwSub");
+const summary = $("summary"), sumTitle = $("sumTitle"), sumList = $("sumList"), sumTime = $("sumTime"), sumClose = $("sumClose");
+const rules = $("rules"), liveEl = $("live"), soundToggle = $("soundToggle");
+const devPanel = $("devPanel"), devBypassLimit = $("devBypassLimit"), devForceResult = $("devForceResult"),
+      devSticky = $("devSticky"), devForceLine = $("devForceLine"), devStatus = $("devStatus"), devMotion = $("devMotion");
+
+/* ---------- görselleri önceden yükle ---------- */
+Object.keys(LABEL).forEach(id => { const im = new Image(); im.src = ICON(id); });
+
+/* ---------- makaraları kur (şerit 3 kez tekrarlanır) ---------- */
+const initial = buildLoseTargets();
+const reels = STRIPS.map((strip, i) => {
+  const el = document.createElement("div"); el.className = "reel";
+  const st = document.createElement("div"); st.className = "strip";
+  for(let c = 0; c < 3; c++) strip.forEach(id => {
+    const cell = document.createElement("div"); cell.className = "cell";
+    const img = document.createElement("img");
+    img.src = ICON(id); img.alt = LABEL[id]; img.draggable = false;
+    cell.appendChild(img); st.appendChild(cell);
+  });
+  el.appendChild(st); reelsEl.appendChild(el);
+  return { el, st, strip, n: strip.length, pos: initial[i], target: initial[i], spinning: false, cells: [...st.children] };
+});
+const idxOf = r => mod(Math.round(r.pos), r.n);
+
+let CELL = 0;
+function measure(){
+  CELL = reels[0].el.clientHeight / ROWS;
+  if(!CELL) return;
+  reels.forEach(r => {
+    r.cells.forEach(c => { c.style.height = CELL + "px"; });
+    r.st.style.height = (CELL * r.n * 3) + "px";
+    paint(r);
+  });
+  if(currentWin) drawWinLines();
+}
+function paint(r){
+  const p = mod(r.pos, r.n);
+  r.st.style.transform = `translate3d(0,${-((p - MID + r.n) * CELL)}px,0)`;
+}
+new ResizeObserver(measure).observe(reelsEl);
+
+/* ---------- marquee ampulleri ---------- */
+function buildBulbs(){
+  const w = cabinet.clientWidth, h = cabinet.clientHeight;
+  if(!w || !h) return;
+  const inset = 10, gap = 21, W = w - inset * 2, H = h - inset * 2;
+  const nx = Math.max(3, Math.round(W / gap)), ny = Math.max(3, Math.round(H / gap));
+  const pts = [];
+  for(let k = 0; k < nx; k++) pts.push([inset + W * k / nx, inset]);
+  for(let k = 0; k < ny; k++) pts.push([inset + W, inset + H * k / ny]);
+  for(let k = 0; k < nx; k++) pts.push([inset + W - W * k / nx, inset + H]);
+  for(let k = 0; k < ny; k++) pts.push([inset, inset + H - H * k / ny]);
+  bulbsEl.innerHTML = pts.map(([x, y], i) => `<i class="bulb" style="left:${x.toFixed(1)}px;top:${y.toFixed(1)}px;--i:${i}"></i>`).join("");
+}
+new ResizeObserver(buildBulbs).observe(cabinet);
+const setMode = m => { cabinet.dataset.mode = m; };
+
+/* ---------- kazanan hücre ve çizgi görselleri ---------- */
+const SVG_NS = "http://www.w3.org/2000/svg";
+let currentWin = null;
+function clearWinVisuals(){
+  currentWin = null; winLinesEl.innerHTML = ""; cabinet.classList.remove("has-win");
+  reels.forEach(r => r.cells.forEach(c => c.classList.remove("is-win")));
+}
+function markWinCells(lines){
+  lines.forEach(line => line.rows.forEach((row, i) => {
+    const r = reels[i], m = mod(idxOf(r) + row - MID, r.n);
+    r.cells.forEach((c, k) => { if(k % r.n === m) c.classList.add("is-win"); });
+  }));
+  cabinet.classList.add("has-win");
+}
+function cellCenter(reelIdx, row){
+  const r = reels[reelIdx].el;
+  return { x: r.offsetLeft + r.clientWidth / 2, y: r.offsetTop + CELL * (row + .5) };
+}
+function drawWinLines(){
+  winLinesEl.innerHTML = "";
+  if(!currentWin || !CELL) return;
+  currentWin.forEach(line => {
+    const pts = line.rows.map((row, i) => { const c = cellCenter(i, row); return `${c.x.toFixed(1)},${c.y.toFixed(1)}`; }).join(" ");
+    ["under", "over"].forEach(cls => {
+      const pl = document.createElementNS(SVG_NS, "polyline");
+      pl.setAttribute("points", pts); pl.setAttribute("class", "win-line " + cls);
+      winLinesEl.appendChild(pl);
+      pl.style.setProperty("--len", Math.ceil(pl.getTotalLength()) + 2);
+    });
+  });
+}
+function callout(text, color){
+  calloutText.textContent = text;
+  calloutEl.style.setProperty("--c", color || "var(--hot)");
+  calloutEl.classList.remove("show"); void calloutEl.offsetWidth; calloutEl.classList.add("show");
+}
+const announce = msg => { liveEl.textContent = ""; setTimeout(() => { liveEl.textContent = msg; }, 50); };
+
+/* =====================================================================
+   SAATLİK HAK (localStorage)
+   ===================================================================== */
+const KEY_SPINS = "agartha_spins_left", KEY_HOUR = "agartha_hour_stamp", KEY_ROUND = "agartha_round_v2";
+let spinsLeft = CONFIG.HOURLY_LIMIT;
+let timerText = "--:--";
+const hourStamp = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}-${d.getHours()}`; };
+const bypass = () => devBypassLimit.checked;
+
+function initSpins(){
+  if(store.get(KEY_HOUR) !== hourStamp()){
+    store.set(KEY_HOUR, hourStamp()); store.set(KEY_SPINS, CONFIG.HOURLY_LIMIT);
+    spinsLeft = CONFIG.HOURLY_LIMIT;
+  } else {
+    const v = parseInt(store.get(KEY_SPINS), 10);
+    spinsLeft = Number.isFinite(v) ? Math.max(0, v) : CONFIG.HOURLY_LIMIT;
+  }
+  updateUI();
+}
+function saveSpins(){ store.set(KEY_SPINS, spinsLeft); updateUI(); }
+function tickTimer(){
+  const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1, 0, 0);
+  const diff = Math.max(0, next - now);
+  timerText = `${String(Math.floor(diff / 60000)).padStart(2, "0")}:${String(Math.floor((diff % 60000) / 1000)).padStart(2, "0")}`;
+  timerEl.textContent = timerText;
+  if(store.get(KEY_HOUR) !== hourStamp()){
+    const wasEmpty = spinsLeft <= 0;
+    initSpins();
+    if(wasEmpty){ sfx("refill"); callout("YENİ HAKLAR!", "var(--cyan)"); }
+  }
+  if(spinBtn.classList.contains("out")) spinLabel.textContent = timerText;
+}
+
+/* =====================================================================
+   TUR DURUMU: free spin sayacı + biriken kazançlar (sayfa yenilense de kaybolmaz)
+   ===================================================================== */
+let round = loadRound();
+let phase = "idle";      // idle | busy
+let inBonus = false;
+const forceQueue = [];
+
+function freshRound(){ return { freeLeft: 0, freeTotal: 0, freeDone: 0, stash: [] }; }
+function loadRound(){
+  try { const r = JSON.parse(store.get(KEY_ROUND)); if(r && Array.isArray(r.stash)) return Object.assign(freshRound(), r); } catch(e){}
+  return freshRound();
+}
+function saveRound(){ store.set(KEY_ROUND, JSON.stringify(round)); }
+function resetRound(){ round = freshRound(); store.del(KEY_ROUND); }
+const bonusActive = () => inBonus || round.freeLeft > 0;
+
+/* =====================================================================
+   ARAYÜZ GÜNCELLEME
+   ===================================================================== */
+for(let i = 0; i < CONFIG.HOURLY_LIMIT; i++){ const p = document.createElement("span"); p.className = "pip"; pipsEl.appendChild(p); }
+let lastPipCount = null;
+
+function updateUI(){
+  const free = bypass();
+  const bon = bonusActive();
+  const out = !free && spinsLeft <= 0 && !bon;
+  const sheetOpen = summary.classList.contains("show") || rules.classList.contains("show");
+  const canSpin = phase === "idle" && !bon && !out && !sheetOpen;
+
+  const pips = [...pipsEl.children];
+  pips.forEach((p, i) => {
+    const on = free || i < spinsLeft;
+    if(lastPipCount !== null && !on && p.classList.contains("on")){ p.classList.remove("spent"); void p.offsetWidth; p.classList.add("spent"); }
+    p.classList.toggle("on", on);
+  });
+  lastPipCount = spinsLeft;
+  spinsNum.textContent = free ? "∞" : spinsLeft;
+
+  spinBtn.disabled = !canSpin;
+  spinBtn.classList.toggle("ready", canSpin);
+  spinBtn.classList.toggle("bonus", bon);
+  spinBtn.classList.toggle("out", out && phase === "idle");
+  if(bon){
+    spinLabel.textContent = "FREE"; spinSub.textContent = `${round.freeDone}/${round.freeTotal}`;
+    spinBtn.setAttribute("aria-label", "Free spinler otomatik dönüyor");
+    spinBtn.style.setProperty("--energy", round.freeTotal ? round.freeDone / round.freeTotal : 0);
+  } else if(out && phase === "idle"){
+    spinLabel.textContent = timerText; spinSub.textContent = "yeni hak";
+    spinBtn.setAttribute("aria-label", "Hakkın bitti, yeni haklar saat başında");
+    spinBtn.style.setProperty("--energy", 0);
+  } else {
+    spinLabel.textContent = "ÇEVİR"; spinSub.textContent = "";
+    spinBtn.setAttribute("aria-label", "Çevir");
+    spinBtn.style.setProperty("--energy", motion.energy);
+  }
+  if(phase === "idle" && !bon) setMode(out ? "off" : "idle");
+  updateHint();
+}
+
+function updateHint(){
+  let t, live = false;
+  if(bonusActive()) t = "Free spinler otomatik dönüyor";
+  else if(!bypass() && spinsLeft <= 0) t = "Yeni haklar saat başında gelir";
+  else if(motion.live){ t = "Telefonu salla ya da butona dokun"; live = true; }
+  else if(motion.denied) t = "Sallama izni kapalı, butona dokun";
+  else if(isTouch) t = "Butona dokun";
+  else t = "Butona tıkla ya da boşluk tuşuna bas";
+  hintEl.textContent = t;
+  hintEl.classList.toggle("live", live);
+  const outOfSpins = !bypass() && spinsLeft <= 0;
+  motionChip.hidden = !(motion.needsPerm && isTouch && !motion.live && !motion.asked && !bonusActive() && !outOfSpins);
+}
+
+function updateBonusHud(){
+  fsNow.textContent = round.freeDone;
+  fsTotal.textContent = round.freeTotal;
+  updateUI();
+}
+function renderStash(popSym){
+  const counts = {};
+  round.stash.forEach(x => { counts[x.sym] = (counts[x.sym] || 0) + 1; });
+  const keys = PRIZE_SYMBOLS.filter(s => counts[s]);
+  stashEl.innerHTML = keys.length
+    ? keys.map(s => `<span class="stash-item${s === popSym ? " pop" : ""}" data-sym="${s}"><img src="${ICON(s)}" alt="">×${counts[s]}</span>`).join("")
+    : `<span class="stash-empty">Kazançlar burada birikir</span>`;
+}
+
+/* =====================================================================
+   SES MOTORU (Web Audio) — dosya yoksa oyun bozulmaz, o ses atlanır
+   ===================================================================== */
+const SOUND_DIR = "./sounds/";
+const SOUNDS = {
+  spinStart  : { files:["spin-start.mp3"], fallback:"lever-pull.mp3", vol:0.8 },
+  reelLoop   : { files:["reel-loop.mp3"], fallback:"cark-normal.mp3", vol:0.5, loop:true },
+  reelStop   : { files:["reel-stop-1.mp3","reel-stop-2.mp3","reel-stop-3.mp3"], fallback:"thud.mp3", fallbackRate:3, vol:0.85 },
+  tick       : { files:["tick.mp3"], vol:0.45 },
+  tension    : { files:["tension-loop.mp3"], vol:0.55, loop:true },
+  nearMiss   : { files:["near-miss.mp3"], vol:0.75 },
+  lose       : { files:["lose.mp3"], vol:0.5 },
+  winFreeSpin: { files:["win-free-spin.mp3"], fallback:"jackpot.mp3", vol:0.85 },
+  winDiscount: { files:["win-discount.mp3"], fallback:"jackpot.mp3", vol:0.9 },
+  winBeer    : { files:["win-beer.mp3"], fallback:"beerwin.mp3", vol:1 },
+  confetti   : { files:["confetti.mp3"], vol:0.8 },
+  uiClick    : { files:["ui-click.mp3"], vol:0.55 },
+  refill     : { files:["refill.mp3"], vol:0.6 },
+  ambient    : { files:["ambient-loop.mp3"], vol:0.16, loop:true }
+};
+const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioCtxClass({ latencyHint: "interactive" });
+const master = audioCtx.createGain();
+const comp = audioCtx.createDynamicsCompressor();
+comp.threshold.value = -14; comp.knee.value = 24; comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.25;
+master.connect(comp); comp.connect(audioCtx.destination);
+
+const KEY_MUTE = "agartha_sound_muted";
+let muted = store.get(KEY_MUTE) === "1";
+master.gain.value = muted ? 0 : 1;
+function applyMute(){
+  master.gain.setTargetAtTime(muted ? 0 : 1, audioCtx.currentTime, 0.03);
+  soundToggle.setAttribute("aria-pressed", String(!muted));
+  soundToggle.setAttribute("aria-label", muted ? "Sesi aç" : "Sesi kapat");
+  soundToggle.textContent = muted ? "🔇" : "🔊";
+}
+applyMute();
+soundToggle.addEventListener("click", () => { muted = !muted; store.set(KEY_MUTE, muted ? "1" : "0"); applyMute(); if(!muted) sfx("uiClick"); });
+
+const buffers = {}, baseRate = {};
+async function loadBuffer(url){
+  const res = await fetch(url);
+  if(!res.ok) throw new Error(res.status);
+  const arr = await res.arrayBuffer();
+  return new Promise((ok, fail) => audioCtx.decodeAudioData(arr, ok, fail));
+}
+async function loadSound(key, def){
+  const results = await Promise.allSettled(def.files.map(f => loadBuffer(SOUND_DIR + f)));
+  let list = results.filter(r => r.status === "fulfilled").map(r => r.value);
+  baseRate[key] = 1;
+  if(!list.length && def.fallback){
+    try { list = [await loadBuffer(SOUND_DIR + def.fallback)]; baseRate[key] = def.fallbackRate || 1; } catch(e){}
+  }
+  if(list.length) buffers[key] = list;
+}
+const soundsReady = Promise.all(Object.entries(SOUNDS).map(([k, d]) => loadSound(k, d)));
+
+let unlocked = false;
+const UNLOCK_EVENTS = ["pointerdown", "pointerup", "touchend", "click", "keydown"];
+function onUnlocked(){
+  if(unlocked) return;
+  unlocked = true;
+  UNLOCK_EVENTS.forEach(ev => window.removeEventListener(ev, unlockAudio, true));
+  startAmbient();
+}
+function unlockAudio(){
+  if(audioCtx.state === "running"){ onUnlocked(); return; }
+  audioCtx.resume().then(() => { if(audioCtx.state === "running") onUnlocked(); }).catch(() => {});
+  try { const b = audioCtx.createBuffer(1, 1, 22050), s = audioCtx.createBufferSource(); s.buffer = b; s.connect(audioCtx.destination); s.start(0); } catch(e){}
+}
+UNLOCK_EVENTS.forEach(ev => window.addEventListener(ev, unlockAudio, { capture: true, passive: true }));
+document.addEventListener("visibilitychange", () => { if(document.hidden) audioCtx.suspend(); else if(unlocked) audioCtx.resume(); });
+
+const active = new Set(), lastVariation = {};
+function pickBuffer(key){
+  const list = buffers[key];
+  if(!list || !list.length) return null;
+  if(list.length === 1) return list[0];
+  let i; do { i = rand(list.length); } while(i === lastVariation[key]);
+  lastVariation[key] = i; return list[i];
+}
+function sfx(key, opt = {}){
+  if(audioCtx.state !== "running") return null;
+  const buf = pickBuffer(key); if(!buf) return null;
+  const { rate = 1, jitter = 0.04, vol = 1, delay = 0 } = opt;
+  const src = audioCtx.createBufferSource(); src.buffer = buf;
+  src.playbackRate.value = (baseRate[key] || 1) * rate * (1 + (Math.random() * 2 - 1) * jitter);
+  const g = audioCtx.createGain(); g.gain.value = (SOUNDS[key].vol ?? 1) * vol;
+  src.connect(g); g.connect(master); src.start(audioCtx.currentTime + delay);
+  const h = { src, g }; active.add(h);
+  src.onended = () => { active.delete(h); try { g.disconnect(); } catch(e){} };
+  return h;
+}
+function stopActiveSfx(fade = 0.08){
+  const t = audioCtx.currentTime;
+  active.forEach(h => { try { h.g.gain.cancelScheduledValues(t); h.g.gain.setTargetAtTime(0, t, fade / 3); h.src.stop(t + fade); } catch(e){} });
+}
+const loops = {};
+function startLoop(key, { fade = 0.1, vol = 1 } = {}){
+  if(!buffers[key] || loops[key] || audioCtx.state !== "running") return;
+  const src = audioCtx.createBufferSource(); src.buffer = buffers[key][0]; src.loop = true;
+  const g = audioCtx.createGain(); g.gain.value = 0; src.connect(g); g.connect(master); src.start();
+  const base = (SOUNDS[key].vol ?? 1) * vol;
+  g.gain.setTargetAtTime(base, audioCtx.currentTime, fade / 3);
+  loops[key] = { src, g, base };
+}
+function setLoopLevel(key, level, fade = 0.2){ const l = loops[key]; if(l) l.g.gain.setTargetAtTime(l.base * level, audioCtx.currentTime, fade / 3); }
+function stopLoop(key, fade = 0.15){
+  const l = loops[key]; if(!l) return; loops[key] = null;
+  const t = audioCtx.currentTime;
+  l.g.gain.cancelScheduledValues(t); l.g.gain.setTargetAtTime(0, t, fade / 3);
+  try { l.src.stop(t + fade + 0.05); } catch(e){}
+  l.src.onended = () => { try { l.g.disconnect(); } catch(e){} };
+}
+function startAmbient(){ if(unlocked) startLoop("ambient", { fade: 3 }); }
+soundsReady.then(() => { startAmbient(); buildSoundTest(); });
+
+// dosyası olmayan kısa efektler için sentez sesler
+function synth(notes, { type = "triangle", step = 0.07, dur = 0.2, vol = 0.2 } = {}){
+  if(audioCtx.state !== "running") return;
+  const t0 = audioCtx.currentTime;
+  notes.forEach((f, k) => {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain(), t = t0 + k * step;
+    o.type = type; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.05);
+  });
+}
+const chime   = () => synth([1318.5, 1975.5], { step: .06, dur: .3, vol: .16 });
+const fanfare = () => synth([523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98], { type: "square", step: .085, dur: .22, vol: .06 });
+const ratchet = q => synth([520 + q * 520], { type: "square", dur: .05, vol: .05 });
+
+const canVibrate = typeof navigator.vibrate === "function";
+function haptic(p){ if(canVibrate) try { navigator.vibrate(p); } catch(e){} }
+
+/* ---------- emoji yağmuru ----------
+   Not: canvas-confetti'nin shapeFromText (emoji konfeti) özelliği Safari gibi bazı
+   tarayıcılarda emojiyi boş beyaz kare olarak çiziyor. Bu yüzden emojiler ayrı,
+   basit DOM öğeleri olarak yağdırılıyor; her tarayıcıda aynı görünür. */
+function emojiRain(ch, count){
+  if(reduceMotion) return;
+  const box = document.createElement("div");
+  box.className = "emoji-rain"; box.setAttribute("aria-hidden", "true");
+  for(let i = 0; i < count; i++){
+    const s = document.createElement("span");
+    s.textContent = ch;
+    s.style.left = (Math.random() * 96) + "vw";
+    s.style.setProperty("--s", (1.6 + Math.random() * 1.6).toFixed(2) + "rem");
+    s.style.setProperty("--d", (1.8 + Math.random() * 1.4).toFixed(2) + "s");
+    s.style.setProperty("--dl", (Math.random() * .8).toFixed(2) + "s");
+    s.style.setProperty("--dx", ((Math.random() * 2 - 1) * 18).toFixed(1) + "vw");
+    s.style.setProperty("--r", ((Math.random() * 2 - 1) * 540).toFixed(0) + "deg");
+    box.appendChild(s);
+  }
+  document.body.appendChild(box);
+  setTimeout(() => box.remove(), 4200);
+}
+
+/* ---------- konfeti (sadece renkli kâğıt, yıldız ve daire; emoji yok) ---------- */
+function fireConfetti(kind){
+  if(reduceMotion) return;
+  // emoji yağmuru konfeti kütüphanesine bağlı değil: CDN yüklenmese de çalışır
+  if(kind === "beer") setTimeout(() => emojiRain("🍺", 22), 250);
+  else if(kind === "bill") setTimeout(() => emojiRain("💸", 14), 220);
+
+  const c = window.confetti;
+  if(typeof c !== "function") return;
+  const base = { zIndex: 70, disableForReducedMotion: true };
+  const colors = ["#ffd23f", "#ff2d95", "#2de2ff", "#ffffff"];
+  if(kind === "beer"){
+    c({ ...base, particleCount: 170, spread: 100, origin: { y: .55 }, colors });
+    setTimeout(() => {
+      c({ ...base, particleCount: 90, angle: 60, spread: 60, origin: { x: 0, y: .85 }, colors });
+      c({ ...base, particleCount: 90, angle: 120, spread: 60, origin: { x: 1, y: .85 }, colors });
+    }, 550);
+  } else if(kind === "bill"){
+    c({ ...base, particleCount: 110, spread: 85, origin: { y: .55 }, colors });
+  } else {
+    c({ ...base, particleCount: 70, spread: 75, shapes: ["star"], scalar: 1.3, origin: { y: .55 }, colors: ["#ffd23f", "#ffffff", "#ff2d95"] });
+  }
+}
+
+/* =====================================================================
+   SALLA – ÇEVİR (DeviceMotion)
+   Android: izin istemez. iPhone (iOS 13+): bir kez dokunarak izin verilir.
+   Her ikisi de HTTPS gerektirir.
+   ===================================================================== */
+const motion = {
+  api: typeof window.DeviceMotionEvent !== "undefined",
+  needsPerm: typeof window.DeviceMotionEvent !== "undefined" && typeof DeviceMotionEvent.requestPermission === "function",
+  listening: false, asked: false, denied: false, live: false,
+  energy: 0, last: null, cooldownUntil: 0, lastQuarter: 0, events: 0, peak: 0
+};
+function startMotion(){
+  if(motion.listening) return;
+  window.addEventListener("devicemotion", onMotion, { passive: true });
+  motion.listening = true;
+}
+function askMotion(){   // mutlaka bir dokunma/tıklama içinde çağrılmalı (iOS kuralı)
+  if(!motion.needsPerm || motion.live || !isTouch){ startMotion(); return; }   // masaüstünde izin sorma
+  if(motion.asked) return;
+  motion.asked = true; updateHint();
+  DeviceMotionEvent.requestPermission()
+    .then(s => { if(s === "granted") startMotion(); else motion.denied = true; updateHint(); })
+    .catch(() => { motion.denied = true; updateHint(); });
+}
+// Hemen dinlemeye başla: Android'de veri izin sormadan akar; iPhone'da izin verilene kadar sessiz kalır.
+if(motion.api) startMotion();
+
+function onMotion(e){
+  const a = (e.acceleration && e.acceleration.x != null) ? e.acceleration : e.accelerationIncludingGravity;
+  if(!a || a.x == null) return;
+  motion.events++;
+  if(!motion.live){ motion.live = true; updateHint(); }
+  if(motion.last){
+    const dx = a.x - motion.last.x, dy = a.y - motion.last.y, dz = a.z - motion.last.z;
+    feedShake(Math.sqrt(dx * dx + dy * dy + dz * dz));
+  }
+  motion.last = { x: a.x, y: a.y, z: a.z };
+}
+
+// Ani sarsıntılar (telefonu masaya bırakmak) tetiklemesin diye enerji kademeli dolar.
+// Dolu halka = spin. Yavaşlarsan halka geri boşalır.
+function feedShake(jerk){
+  motion.peak = Math.max(motion.peak * 0.98, jerk);
+  const now = performance.now();
+  const canUse = phase === "idle" && !bonusActive() && !summary.classList.contains("show") && !rules.classList.contains("show");
+  if(!canUse || now < motion.cooldownUntil){ motion.energy = 0; setRing(); return; }
+  const thr = 9 / CONFIG.SHAKE_SENSITIVITY;
+  if(jerk > thr) motion.energy = Math.min(1, motion.energy + Math.min(0.12, (jerk - thr) * 0.012 * CONFIG.SHAKE_SENSITIVITY));
+  const q = Math.floor(motion.energy * 4);
+  if(q > motion.lastQuarter && q < 4){ ratchet(q); haptic(8); }
+  motion.lastQuarter = q;
+  setRing(); kickDecay();
+  if(motion.energy >= 1){
+    motion.energy = 0; motion.lastQuarter = 0; motion.cooldownUntil = now + 1200; setRing();
+    cabinet.classList.remove("kick"); void cabinet.offsetWidth; cabinet.classList.add("kick");
+    if(!bypass() && spinsLeft <= 0){ nudge(); return; }
+    requestSpin("shake");
+  }
+}
+function setRing(){ if(!spinBtn.classList.contains("bonus")) spinBtn.style.setProperty("--energy", motion.energy.toFixed(3)); }
+let decayRaf = 0, decayLast = 0;
+function kickDecay(){ if(!decayRaf){ decayLast = performance.now(); decayRaf = requestAnimationFrame(decayStep); } }
+function decayStep(now){
+  const dt = Math.min(0.1, (now - decayLast) / 1000); decayLast = now;
+  motion.energy = Math.max(0, motion.energy - 0.9 * dt);
+  if(motion.energy < 0.25) motion.lastQuarter = 0;
+  setRing();
+  decayRaf = motion.energy > 0 ? requestAnimationFrame(decayStep) : 0;
+}
+function simulateShake(){
+  let k = 0; const id = setInterval(() => { feedShake(26 + Math.random() * 10); if(++k > 16) clearInterval(id); }, 16);
+}
+setInterval(() => {
+  if(devPanel.hidden) return;
+  devMotion.textContent = `Hareket sensörü: ${motion.live ? "aktif" : (motion.needsPerm ? (motion.asked ? (motion.denied ? "izin yok" : "izin bekleniyor") : "izin gerekli (iPhone)") : "veri yok (masaüstü olabilir)")} · olay: ${motion.events} · tepe sarsıntı: ${motion.peak.toFixed(1)} · enerji: ${(motion.energy * 100).toFixed(0)}%`;
+}, 250);
+
+/* =====================================================================
+   MAKARA MOTORU
+   Her makaranın duruş anı önceden hesaplanır: soldan sağa sırayla durur,
+   duruşta hız sürekli kalır (sıçrama yok), sonda küçük bir geri sekme olur.
+   ===================================================================== */
+function easeOutBack(p){ const u = p - 1; return 1 + (BACK + 1) * u * u * u + BACK * u * u; }
+
+function makePlan(outcome, turbo){
+  const slowLast = outcome === "beer" || outcome === "bill" || outcome === "near-miss";
+  const b = turbo ? { first: 700, gap: 230, land: 760 } : { first: 1050, gap: 330, land: 980 };
+  const landMs = [], baseEnd = [];
+  for(let i = 0; i < REELS; i++){ landMs.push(b.land); baseEnd.push(b.first + i * b.gap + Math.random() * 80); }
+  if(slowLast){
+    landMs[REELS - 1] = 2700 + Math.random() * 500;
+    baseEnd[REELS - 1] = baseEnd[REELS - 2] + 2300 + Math.random() * 450;
+  }
+  return { landMs, baseEnd, minGap: b.gap * .75 };
+}
+
+function runReels(plan, onReelsSettled){
+  return new Promise(resolve => {
+    const t0 = performance.now();
+    let prevEnd = 0;
+    reels.forEach((r, i) => {
+      const landMs = plan.landMs[i];
+      const D = SPEED * landMs / 1000 / (3 + BACK);     // yavaşlama sırasında kat edilecek hücre
+      const want = Math.max(plan.baseEnd[i], prevEnd + plan.minGap);
+      let ts = (want - landMs) / 1000;
+      ts += (mod(r.target - r.pos - SPEED * ts - D + r.n / 2, r.n) - r.n / 2) / SPEED;
+      while(ts < 0 || ts * 1000 + landMs < prevEnd + plan.minGap * .6) ts += r.n / SPEED;
+      Object.assign(r, { spinning: true, pos0: r.pos, D, landMs, landStart: ts * 1000, cruise: SPEED * ts });
+      prevEnd = ts * 1000 + landMs;
+      r.el.classList.add("is-spinning");
+      r.el.classList.remove("landed", "anticipate");
+    });
+
+    let stopped = 0, tensionReel = null, tensionSym = null, lastTick = 0;
+    const schedule = fn => document.hidden ? setTimeout(() => fn(performance.now()), 50) : requestAnimationFrame(fn);
+
+    function frame(now){
+      const t = now - t0;
+      let allDone = true;
+      reels.forEach((r, i) => {
+        if(!r.spinning) return;
+        allDone = false;
+        const prev = r.pos;
+        if(t < r.landStart){
+          r.pos = r.pos0 + SPEED * t / 1000;
+          r.st.style.setProperty("--mb", MB + "px");
+        } else {
+          const p = Math.min(1, (t - r.landStart) / r.landMs);
+          r.pos = r.pos0 + r.cruise + r.D * easeOutBack(p);
+          r.st.style.setProperty("--mb", (MB * (1 - p) * (1 - p)).toFixed(2) + "px");
+          if(r === tensionReel && Math.floor(r.pos) !== Math.floor(prev) && now - lastTick > 55){
+            lastTick = now; sfx("tick", { jitter: .06 }); haptic(4);
+          }
+          if(p >= 1){
+            r.pos = r.target; r.spinning = false;
+            r.el.classList.remove("is-spinning", "anticipate");
+            r.st.style.setProperty("--mb", "0px");
+            r.el.classList.remove("landed"); void r.el.offsetWidth; r.el.classList.add("landed");
+            stopped++;
+            sfx("reelStop", { rate: .92 + stopped * .05 }); haptic(10);
+            setLoopLevel("reelLoop", Math.max(.2, 1 - stopped * .22), .15);
+            if(stopped === REELS - 1){
+              const lastReel = reels.find(x => x.spinning);
+              const settled = []; reels.forEach((x, k) => { if(!x.spinning) settled.push({ i: k, idx: idxOf(x) }); });
+              const sym = tensionSymbol(settled);
+              const remaining = lastReel ? lastReel.landStart + lastReel.landMs - t : 0;
+              if(sym && lastReel && remaining > 700){
+                tensionReel = lastReel; tensionSym = sym;
+                setMode("tense"); lastReel.el.classList.add("anticipate");
+                startLoop("tension", { fade: .3 }); setLoopLevel("reelLoop", .2, .3); haptic([15, 60, 15]);
+                if(onReelsSettled) onReelsSettled(sym);
+              }
+            }
+          }
+        }
+        paint(r);
+      });
+      if(allDone){ resolve({ tensionSym }); return; }
+      schedule(frame);
+    }
+    schedule(frame);
+  });
+}
+
+/* ---------- sonuç belirleme ---------- */
+function takeForced(){
+  if(forceQueue.length) return forceQueue.shift();
+  const v = devForceResult.value;
+  if(v === "auto") return null;
+  if(!devSticky.checked) devForceResult.value = "auto";
+  return v;
+}
+function rollOutcome(){
+  const forced = takeForced();
+  if(forced) return forced;
+  const r = Math.random();
+  let acc = 0;
+  for(const sym of PRIZE_SYMBOLS){ acc += 1 / CONFIG.ODDS[sym]; if(r < acc) return sym; }
+  return Math.random() < CONFIG.NEAR_MISS_RATE ? "near-miss" : "lose";
+}
+
+/* =====================================================================
+   OYUN AKIŞI
+   ===================================================================== */
+async function requestSpin(source, { free = false } = {}){
+  if(phase !== "idle" || bonusActive()) return;
+  if(summary.classList.contains("show") || rules.classList.contains("show")) return;
+  if(!free && !bypass() && spinsLeft <= 0){ nudge(); return; }
+  unlockAudio();
+  if(!free && !bypass()){ spinsLeft--; saveSpins(); }
+  phase = "busy"; updateUI();
+  try {
+    await doSpin(false);
+    await continueRound();
+  } catch(err){
+    console.error(err);
+  } finally {
+    phase = "idle"; updateUI();
+  }
+}
+
+async function doSpin(isFree){
+  clearWinVisuals(); setMode("spin");
+  stopActiveSfx(); stopLoop("tension", .05);
+
+  const outcome = rollOutcome();
+  const forcedLine = devForceLine.value;
+  let targets;
+  if(PRIZE_SYMBOLS.includes(outcome)) targets = buildWinTargets(outcome, forcedLine).idxs;
+  else if(outcome === "near-miss") targets = buildNearMissTargets(REELS - 1, pick(TENSION_SYMBOLS), forcedLine).idxs;
+  else targets = buildLoseTargets();
+  reels.forEach((r, i) => { r.target = targets[i]; });
+
+  sfx("spinStart"); haptic(18);
+  stopLoop("reelLoop", .05); startLoop("reelLoop", { fade: .15 });
+  const { tensionSym } = await runReels(makePlan(outcome, isFree && CONFIG.TURBO_IN_BONUS));
+  stopLoop("reelLoop", .25); stopLoop("tension", .15);
+
+  // kazanç her zaman EKRANDA görünen ızgaradan okunur
+  const wins = winningLines(reels.map(idxOf)).filter(w => PRIZE_SYMBOLS.includes(w.symbol));
+  if(!wins.length){
+    if(tensionSym){
+      setMode("near"); sfx("nearMiss", { delay: .05, jitter: .02 }); haptic([20, 40, 20]);
+      callout("KIL PAYI!", "var(--hot)");
+      announce(`Kıl payı! Bir çizgide 3 ${PRIZES[tensionSym].noun}.`);
+      await wait(1250);
+    } else {
+      sfx("lose", { delay: .05, jitter: .02 });
+      await wait(isFree ? 380 : 120);
+    }
+    setMode(bonusActive() ? "spin" : "idle");
+    return;
+  }
+
+  const sym = PRIZE_SYMBOLS.find(s => wins.some(w => w.symbol === s));
+  const lines = wins.filter(w => w.symbol === sym).map(w => w.line);
+  setMode("win"); markWinCells(lines); currentWin = lines; drawWinLines();
+  haptic([30, 50, 30, 50, 140]);
+  await wait(700);
+
+  if(sym === "free-spin"){
+    const retrigger = bonusActive();
+    const n = CONFIG.FREE_SPINS_PER_TRIGGER;
+    round.freeLeft += n; round.freeTotal += n; saveRound();
+    sfx("winFreeSpin", { jitter: 0 }); fanfare(); fireConfetti("free-spin");
+    announce(`${n} free spin kazandın, otomatik başlıyor.`);
+    await showBigWin({ icon: "free-spin", title: retrigger ? `+${n} FREE SPIN!` : `${n} FREE SPIN!`, sub: retrigger ? "Bonus uzadı" : "Otomatik başlıyor" });
+  } else {
+    round.stash.push({ sym, t: Date.now() }); saveRound();
+    const mega = sym === "beer";
+    if(mega){ sfx("winBeer", { jitter: 0 }); sfx("confetti", { delay: .2, jitter: 0 }); quake(); }
+    else sfx("winDiscount", { jitter: 0 });
+    fireConfetti(sym);
+    announce(`${PRIZES[sym].item} kazandın!`);
+    await showBigWin({ icon: sym, title: PRIZES[sym].title, sub: `${lines[0].where} 4 ${PRIZES[sym].noun}`, mega });
+    if(bonusActive()) await flyToStash(sym, lines[0]);
+  }
+  setMode(bonusActive() ? "spin" : "idle");
+}
+
+async function continueRound(){
+  while(round.freeLeft > 0){
+    if(round.freeDone >= CONFIG.MAX_FREE_SPINS_PER_ROUND){ round.freeLeft = 0; break; }
+    if(!inBonus) await enterBonus();
+    await wait(550);
+    round.freeLeft--; round.freeDone++; saveRound(); updateBonusHud();
+    await doSpin(true);
+  }
+  if(inBonus && !round.stash.length){ setMode("idle"); callout("BONUS BİTTİ", "var(--cyan)"); await wait(1400); }
+  if(round.stash.length) await showSummary();
+  if(inBonus) exitBonus();
+  resetRound();
+}
+
+async function enterBonus(){
+  inBonus = true;
+  document.body.classList.add("is-bonus");
+  hud.hidden = true; bonusHud.hidden = false;
+  renderStash(); updateBonusHud(); setMode("spin");
+  setLoopLevel("ambient", 2.5, 1);
+  await wait(350);
+}
+function exitBonus(){
+  inBonus = false;
+  document.body.classList.remove("is-bonus");
+  hud.hidden = false; bonusHud.hidden = true;
+  setLoopLevel("ambient", 1, 1);
+  setMode("idle"); updateUI();
+}
+
+function nudge(){
+  spinBtn.classList.remove("nudge"); void spinBtn.offsetWidth; spinBtn.classList.add("nudge");
+  haptic([10, 40, 10]);
+}
+function quake(){
+  if(reduceMotion) return;
+  page.classList.remove("quake"); void page.offsetWidth; page.classList.add("quake");
+}
+
+/* ---------- büyük kazanç ekranı ---------- */
+function showBigWin({ icon, title, sub, mega = false }){
+  return new Promise(resolve => {
+    bwIcon.src = ICON(icon); bwIcon.alt = LABEL[icon] || "";
+    bwTitle.textContent = title; bwSub.textContent = sub;
+    bigwin.classList.toggle("mega", mega);
+    bigwin.setAttribute("aria-hidden", "false");
+    bigwin.classList.add("show");
+    let done = false;
+    const finish = () => {
+      if(done) return; done = true;
+      bigwin.classList.remove("show"); bigwin.setAttribute("aria-hidden", "true");
+      bigwin.removeEventListener("click", finish);
+      setTimeout(resolve, 260);
+    };
+    setTimeout(() => bigwin.addEventListener("click", finish), 600);   // yanlışlıkla hemen kapanmasın
+    setTimeout(finish, mega ? 3000 : 2200);
+  });
+}
+
+/* ---------- ödül ikonu bonus kasasına uçar ---------- */
+function flyToStash(sym, line){
+  return new Promise(resolve => {
+    const done = () => { renderStash(sym); chime(); haptic(12); resolve(); };
+    const target = stashEl.querySelector(`[data-sym="${sym}"]`) || stashEl;
+    if(reduceMotion || !CELL || !target.animate){ done(); return; }
+    const rr = reelsEl.getBoundingClientRect(), c = cellCenter(0, line.rows[0]);
+    const sx = rr.left + c.x, sy = rr.top + c.y;
+    const tr = target.getBoundingClientRect(), tx = tr.left + tr.width / 2, ty = tr.top + tr.height / 2;
+    const size = CELL * .85;
+    const img = new Image(); img.src = ICON(sym); img.className = "flyer"; img.alt = "";
+    Object.assign(img.style, { width: size + "px", height: size + "px", left: (sx - size / 2) + "px", top: (sy - size / 2) + "px" });
+    document.body.appendChild(img);
+    const anim = img.animate([
+      { transform: "translate(0,0) scale(1)" },
+      { transform: `translate(${(tx - sx) * .45}px,${(ty - sy) * .45 - 50}px) scale(1.5)`, offset: .45 },
+      { transform: `translate(${tx - sx}px,${ty - sy}px) scale(.3)`, opacity: .85 }
+    ], { duration: 780, easing: "cubic-bezier(.5,0,.5,1)" });
+    anim.onfinish = () => { img.remove(); done(); };
+  });
+}
+
+/* ---------- kazanç özeti ---------- */
+let lastFocus = null;
+function openSheet(el, focusEl){
+  lastFocus = document.activeElement;
+  el.classList.add("show"); el.setAttribute("aria-hidden", "false");
+  updateUI();
+  setTimeout(() => focusEl && focusEl.focus(), 60);
+}
+function closeSheet(el){
+  el.classList.remove("show"); el.setAttribute("aria-hidden", "true");
+  updateUI();
+  if(lastFocus && lastFocus.focus) lastFocus.focus();
+}
+function showSummary(){
+  return new Promise(resolve => {
+    const counts = {};
+    round.stash.forEach(x => { counts[x.sym] = (counts[x.sym] || 0) + 1; });
+    const keys = PRIZE_SYMBOLS.filter(s => counts[s]);
+    sumTitle.textContent = round.stash.length > 1 ? "KASA DOLDU!" : (counts.beer ? "BEDAVA BİRA!" : "KAZANDIN!");
+    sumList.innerHTML = keys.map(s => `<li><img src="${ICON(s)}" alt=""><span class="sum-n">${counts[s]}×</span><span class="sum-item">${PRIZES[s].item}</span></li>`).join("");
+    const last = round.stash[round.stash.length - 1];
+    sumTime.textContent = new Date(last ? last.t : Date.now()).toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    sumClose.onclick = () => { sfx("uiClick"); closeSheet(summary); resolve(); };
+    openSheet(summary, sumClose);
+  });
+}
+
+/* ---------- ödüller / kurallar ---------- */
+function buildRules(){
+  const rows = [["beer", "Bedava bira"], ["bill", "%30 indirim"], ["free-spin", `${CONFIG.FREE_SPINS_PER_TRIGGER} otomatik free spin`]];
+  $("payList").innerHTML = rows.map(([s, txt]) =>
+    `<li><span class="pay-icons">${`<img src="${ICON(s)}" alt="">`.repeat(4)}</span><span class="pay-prize">${txt}</span></li>`).join("");
+  $("linesTitle").textContent = `${PAYLINES.length} kazanç çizgisi`;
+  $("lineGrid").innerHTML = PAYLINES.map(l => {
+    const dots = []; for(let x = 0; x < REELS; x++) for(let y = 0; y < ROWS; y++) dots.push(`<circle cx="${5 + x * 10}" cy="${5 + y * 10}" r="1.6" fill="#ffffff40"/>`);
+    const pts = l.rows.map((y, x) => `${5 + x * 10},${5 + y * 10}`).join(" ");
+    return `<figure><svg viewBox="0 0 40 50" aria-hidden="true">${dots.join("")}<polyline points="${pts}" fill="none" stroke="#ffd23f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><figcaption>${l.name}</figcaption></figure>`;
+  }).join("");
+  $("rulesText").textContent = `Bir çizgide soldan sağa 4 aynı simge kazandırır. Saatte ${CONFIG.HOURLY_LIMIT} hakkın var; free spinler hakkından düşmez ve kendiliğinden döner, bu sırada kazandıkların kasada birikir. Telefonunu sallayarak da çevirebilirsin.`;
+}
+$("infoBtn").addEventListener("click", () => { sfx("uiClick"); buildRules(); openSheet(rules, $("rulesClose")); });
+$("rulesClose").addEventListener("click", () => { sfx("uiClick"); closeSheet(rules); });
+rules.addEventListener("click", e => { if(e.target === rules) closeSheet(rules); });
+document.addEventListener("keydown", e => { if(e.key === "Escape" && rules.classList.contains("show")) closeSheet(rules); });
+
+/* ---------- girişler: buton, boşluk tuşu, sallama ---------- */
+spinBtn.addEventListener("click", () => {
+  askMotion();              // iPhone: ilk dokunuşta sallama izni de istenir
+  requestSpin("tap");
+});
+motionChip.addEventListener("click", () => { askMotion(); sfx("uiClick"); });
+document.addEventListener("keydown", e => {
+  if(e.key !== " " && e.key !== "Enter") return;
+  const t = e.target;
+  if(t === spinBtn) return;
+  if(t.closest && t.closest("input,select,textarea,button,a,.dev-panel,.sheet")) return;
+  e.preventDefault();
+  requestSpin("key");
+});
+
+/* =====================================================================
+   GELİŞTİRİCİ PANELİ
+   ===================================================================== */
+PAYLINES.forEach(l => { const o = document.createElement("option"); o.value = l.id; o.textContent = `${l.name} (${l.rows.join("-")})`; devForceLine.appendChild(o); });
+const oddInputs = { oddBeer: "beer", oddBill: "bill", oddFree: "free-spin" };
+Object.entries(oddInputs).forEach(([id, sym]) => {
+  const el = $(id); el.value = CONFIG.ODDS[sym];
+  el.addEventListener("change", () => { const v = Math.max(1, parseInt(el.value, 10) || CONFIG.ODDS[sym]); CONFIG.ODDS[sym] = v; el.value = v; });
+});
+$("freeCount").value = CONFIG.FREE_SPINS_PER_TRIGGER;
+$("freeCount").addEventListener("change", e => { CONFIG.FREE_SPINS_PER_TRIGGER = Math.min(10, Math.max(1, parseInt(e.target.value, 10) || 3)); e.target.value = CONFIG.FREE_SPINS_PER_TRIGGER; });
+$("shakeSens").value = CONFIG.SHAKE_SENSITIVITY; $("shakeSensOut").textContent = CONFIG.SHAKE_SENSITIVITY.toFixed(1);
+$("shakeSens").addEventListener("input", e => { CONFIG.SHAKE_SENSITIVITY = parseFloat(e.target.value); $("shakeSensOut").textContent = CONFIG.SHAKE_SENSITIVITY.toFixed(1); });
+
+function openDev(){ devPanel.hidden = false; devPanel.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" }); }
+$("devToggleBtn").addEventListener("click", () => {
+  if(!devPanel.hidden){ devPanel.hidden = true; return; }
+  const psw = prompt("Geliştirici şifresi:");
+  if(psw === PASSWORD) openDev(); else if(psw !== null) alert("Hatalı şifre!");
+});
+devBypassLimit.addEventListener("change", updateUI);
+$("devShake").addEventListener("click", simulateShake);
+$("devBonusDemo").addEventListener("click", () => {
+  if(phase !== "idle") return;
+  forceQueue.length = 0;
+  forceQueue.push("free-spin", "bill", "near-miss", "beer");
+  devStatus.textContent = "Bonus demosu: free spin → indirim → kıl payı → bira (hak düşmez)";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  requestSpin("dev", { free: true });
+});
+$("devResetSpinsBtn").addEventListener("click", () => { spinsLeft = CONFIG.HOURLY_LIMIT; saveSpins(); devStatus.textContent = "Haklar 10 olarak yenilendi."; });
+$("devClearStorageBtn").addEventListener("click", () => { store.clear(); resetRound(); initSpins(); devStatus.textContent = "Hafıza temizlendi."; });
+
+function buildSoundTest(){
+  const el = $("soundTest"); el.innerHTML = "";
+  Object.entries(SOUNDS).forEach(([key, def]) => {
+    const ok = !!buffers[key];
+    const b = document.createElement("button"); b.type = "button";
+    b.textContent = (ok ? "✔ " : "✖ ") + key + (def.loop ? " ⟳" : "");
+    b.className = ok ? "" : "missing"; b.disabled = !ok;
+    b.addEventListener("click", () => {
+      unlockAudio();
+      if(def.loop){ if(loops[key]){ stopLoop(key); b.classList.remove("on"); } else { startLoop(key); b.classList.add("on"); } }
+      else sfx(key);
+    });
+    el.appendChild(b);
+  });
+}
+
+/* ---------- test için dışarı açılan küçük kanca ---------- */
+window.__lucky = { CONFIG, forceQueue, requestSpin, simulateShake, get phase(){ return phase; }, get round(){ return round; }, get spinsLeft(){ return spinsLeft; }, openDev };
+
+/* =====================================================================
+   BAŞLANGIÇ
+   ===================================================================== */
+initSpins();
+tickTimer(); setInterval(tickTimer, 1000);
+measure(); buildBulbs(); renderStash();
+
+// Yarıda kalmış bir bonus ya da alınmamış kazanç varsa kaldığı yerden devam et
+if(round.freeLeft > 0 || round.stash.length){
+  phase = "busy"; updateUI();
+  setTimeout(async () => {
+    try { await continueRound(); } catch(e){ console.error(e); }
+    finally { phase = "idle"; updateUI(); }
+  }, 900);
+}
+})();
+</script>
+</body>
+</html>
