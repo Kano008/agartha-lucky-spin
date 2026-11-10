@@ -508,7 +508,8 @@ body.is-bonus .window{box-shadow:inset 0 0 0 2px #000,inset 0 0 30px #000,0 0 0 
    ===================================================================== */
 const CONFIG = {
   SPIN_LIMIT: 10,                 // bir dönemde kaç çevirme hakkı var
-  REFILL_MINUTES: 60,             // ilk çevirmeden kaç dakika sonra haklar yenilensin
+  REFILL_MINUTES: 60,             // sayaç başladıktan kaç dakika sonra haklar yenilensin
+  REFILL_TIMER_STARTS: "first-spin", // "first-spin" = ilk çevirmede başlar · "empty" = haklar bitince başlar
   // Her spin için kazanma ihtimali: 1/N
   ODDS: { beer: 600, bill: 300, "free-spin": 20 },   // free spin: eskiden 1/200, şimdi 1/20
   FREE_SPINS_PER_TRIGGER: 3,      // 4 free spin simgesi = kaç OTOMATİK çevirme (1 yaparsan eski "+1 hak" gibi olur)
@@ -696,16 +697,36 @@ function paint(r){
 new ResizeObserver(measure).observe(reelsEl);
 
 /* ---------- marquee ampulleri ---------- */
+// Ampuller kabinin yuvarlak kenarını takip eden bir yol üzerine eşit aralıkla dizilir;
+// köşelerde de kavisin üstünde kalırlar, çerçevenin dışına taşmazlar.
 function buildBulbs(){
   const w = cabinet.clientWidth, h = cabinet.clientHeight;
   if(!w || !h) return;
-  const inset = 10, gap = 21, W = w - inset * 2, H = h - inset * 2;
-  const nx = Math.max(3, Math.round(W / gap)), ny = Math.max(3, Math.round(H / gap));
+  const inset = 10, gap = 21;
+  const R = parseFloat(getComputedStyle(cabinet).borderTopLeftRadius) || 0;
+  const r = Math.max(0, R - inset);                 // içteki yolun köşe yarıçapı
+  const x0 = inset, y0 = inset, W = w - inset * 2, H = h - inset * 2;
+  const sw = W - 2 * r, sh = H - 2 * r, arc = Math.PI * r / 2;
+  const segs = [   // saat yönünde: üst kenar → sağ üst köşe → sağ kenar → …
+    { len: sw,  at: t => [x0 + r + t, y0] },
+    { len: arc, at: t => { const a = -Math.PI / 2 + t / r; return [x0 + W - r + r * Math.cos(a), y0 + r + r * Math.sin(a)]; } },
+    { len: sh,  at: t => [x0 + W, y0 + r + t] },
+    { len: arc, at: t => { const a = t / r; return [x0 + W - r + r * Math.cos(a), y0 + H - r + r * Math.sin(a)]; } },
+    { len: sw,  at: t => [x0 + W - r - t, y0 + H] },
+    { len: arc, at: t => { const a = Math.PI / 2 + t / r; return [x0 + r + r * Math.cos(a), y0 + H - r + r * Math.sin(a)]; } },
+    { len: sh,  at: t => [x0, y0 + H - r - t] },
+    { len: arc, at: t => { const a = Math.PI + t / r; return [x0 + r + r * Math.cos(a), y0 + r + r * Math.sin(a)]; } }
+  ];
+  const P = segs.reduce((a, s) => a + s.len, 0);
+  const N = Math.max(12, Math.round(P / gap));
   const pts = [];
-  for(let k = 0; k < nx; k++) pts.push([inset + W * k / nx, inset]);
-  for(let k = 0; k < ny; k++) pts.push([inset + W, inset + H * k / ny]);
-  for(let k = 0; k < nx; k++) pts.push([inset + W - W * k / nx, inset + H]);
-  for(let k = 0; k < ny; k++) pts.push([inset, inset + H - H * k / ny]);
+  for(let k = 0; k < N; k++){
+    let s = (k + .5) * P / N;
+    for(const g of segs){
+      if(g.len > 0 && s <= g.len){ pts.push(g.at(s)); break; }
+      s -= g.len;
+    }
+  }
   bulbsEl.innerHTML = pts.map(([x, y], i) => `<i class="bulb" style="left:${x.toFixed(1)}px;top:${y.toFixed(1)}px;--i:${i}"></i>`).join("");
 }
 new ResizeObserver(buildBulbs).observe(cabinet);
@@ -826,36 +847,49 @@ const announce = msg => { liveEl.textContent = ""; setTimeout(() => { liveEl.tex
 
 /* =====================================================================
    HAKLAR (localStorage)
-   Sayaç saat başında değil, ilk çevirmede başlar. REFILL_MINUTES dolunca
-   tüm haklar yenilenir ve sayaç durur; bir sonraki çevirmede yeniden başlar.
+   Herkes 10 hakla başlar. Sayaç saat başında değil, CONFIG.REFILL_TIMER_STARTS
+   anında başlar (ilk çevirme ya da haklar bitince). REFILL_MINUTES dolunca tüm
+   haklar yenilenir ve sayaç durur.
+
+   ÖNEMLİ: Bu sürüm kendi anahtarını kullanır. Eski index4/index5 sürümleri
+   "agartha_spins_left" anahtarına yazıyor; aynı tarayıcıda onları oynamış biri
+   yeni sayfayı açınca 0 hakla başlıyordu. Eski anahtarlar artık okunmuyor.
    ===================================================================== */
-const KEY_SPINS = "agartha_spins_left", KEY_CYCLE = "agartha_cycle_start", KEY_ROUND = "agartha_round_v2";
-const KEY_OLD_HOUR = "agartha_hour_stamp";   // eski "saat başı" sistemin kaydı, artık kullanılmıyor
+const KEY_STATE = "agartha_luckyspin_spins_v3", KEY_ROUND = "agartha_round_v2";
 const refillMs = () => CONFIG.REFILL_MINUTES * 60000;
 let spinsLeft = CONFIG.SPIN_LIMIT;
-let cycleStart = null;   // bu dönemdeki ilk çevirmenin zamanı (ms) · null = sayaç çalışmıyor
+let cycleStart = null;   // sayacın başladığı an (ms) · null = sayaç çalışmıyor
 let timerText = "--:--";
 const bypass = () => devBypassLimit.checked;
 
 function initSpins(){
-  store.del(KEY_OLD_HOUR);
-  const v = parseInt(store.get(KEY_SPINS), 10);
-  spinsLeft = Number.isFinite(v) ? Math.min(CONFIG.SPIN_LIMIT, Math.max(0, v)) : CONFIG.SPIN_LIMIT;
-  const c = parseInt(store.get(KEY_CYCLE), 10);
-  cycleStart = Number.isFinite(c) ? c : null;
-  // eski sürümden eksik hakla gelen oyuncu: sayacı şimdi başlat
-  if(cycleStart === null && spinsLeft < CONFIG.SPIN_LIMIT){ cycleStart = Date.now(); store.set(KEY_CYCLE, cycleStart); }
-  checkRefill(false);
-  updateUI();
+  let s = null;
+  try { s = JSON.parse(store.get(KEY_STATE)); } catch(e){}
+  const now = Date.now();
+  const start = s && Number.isFinite(s.start) ? s.start : null;
+  const left = s && Number.isFinite(s.left) ? Math.min(CONFIG.SPIN_LIMIT, Math.max(0, Math.floor(s.left))) : CONFIG.SPIN_LIMIT;
+  if(start !== null && (start > now + 60000 || now >= start + refillMs())){
+    // süre dolmuş ya da cihaz saati ileri/geri alınmış: haklar tam
+    spinsLeft = CONFIG.SPIN_LIMIT; cycleStart = null;
+  } else if(start === null && CONFIG.REFILL_TIMER_STARTS !== "empty"){
+    // çalışan bir sayaç yoksa haklar her zaman tam başlar (ilk giriş dahil)
+    spinsLeft = CONFIG.SPIN_LIMIT; cycleStart = null;
+  } else {
+    spinsLeft = left; cycleStart = start;
+    if(spinsLeft <= 0 && cycleStart === null) cycleStart = now;   // olmaması gereken durum: beklemeyi başlat
+  }
+  saveSpins();
 }
-function saveSpins(){ store.set(KEY_SPINS, spinsLeft); updateUI(); }
-// ücretli bir çevirme harcanır; dönemin ilk çevirmesiyse 1 saatlik sayaç başlar
+function saveSpins(){ store.set(KEY_STATE, JSON.stringify({ left: spinsLeft, start: cycleStart })); updateUI(); }
+// ücretli bir çevirme harcanır; ayara göre sayaç ilk çevirmede ya da haklar bitince başlar
 function useSpin(){
-  if(cycleStart === null){ cycleStart = Date.now(); store.set(KEY_CYCLE, cycleStart); }
-  spinsLeft--; saveSpins(); tickTimer();
+  spinsLeft--;
+  const startNow = CONFIG.REFILL_TIMER_STARTS === "empty" ? spinsLeft <= 0 : true;
+  if(cycleStart === null && startNow) cycleStart = Date.now();
+  saveSpins(); tickTimer();
 }
 function refillSpins(){
-  spinsLeft = CONFIG.SPIN_LIMIT; cycleStart = null; store.del(KEY_CYCLE); saveSpins();
+  spinsLeft = CONFIG.SPIN_LIMIT; cycleStart = null; saveSpins();
 }
 function checkRefill(loud){
   if(cycleStart === null || Date.now() < cycleStart + refillMs()) return false;
@@ -1530,7 +1564,7 @@ function buildRules(){
     const pts = l.rows.map((y, x) => `${5 + x * 10},${5 + y * 10}`).join(" ");
     return `<figure><svg viewBox="0 0 40 50" aria-hidden="true">${dots.join("")}<polyline points="${pts}" fill="none" stroke="#ffd23f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><figcaption>${l.name}</figcaption></figure>`;
   }).join("");
-  $("rulesText").textContent = `Bir çizgide soldan sağa 4 aynı simge kazandırır. ${CONFIG.SPIN_LIMIT} hakkın var; ilk çevirmenden ${CONFIG.REFILL_MINUTES} dakika sonra hepsi yenilenir. Free spinler hakkından düşmez ve kendiliğinden döner, bu sırada kazandıkların kasada birikir. Telefonunu sallayarak da çevirebilirsin.`;
+  $("rulesText").textContent = `Bir çizgide soldan sağa 4 aynı simge kazandırır. ${CONFIG.SPIN_LIMIT} hakkın var; ${CONFIG.REFILL_TIMER_STARTS === "empty" ? "hakların bitince" : "ilk çevirmenden"} ${CONFIG.REFILL_MINUTES} dakika sonra hepsi yenilenir. Free spinler hakkından düşmez ve kendiliğinden döner, bu sırada kazandıkların kasada birikir. Telefonunu sallayarak da çevirebilirsin.`;
 }
 $("infoBtn").addEventListener("click", () => { sfx("uiClick"); buildRules(); openSheet(rules, $("rulesClose")); });
 $("rulesClose").addEventListener("click", () => { sfx("uiClick"); closeSheet(rules); });
@@ -1585,7 +1619,7 @@ $("devBonusDemo").addEventListener("click", () => {
 $("devResetSpinsBtn").addEventListener("click", () => { refillSpins(); tickTimer(); devStatus.textContent = `Haklar ${CONFIG.SPIN_LIMIT} olarak yenilendi, sayaç durdu.`; });
 $("devExpireBtn").addEventListener("click", () => {
   if(cycleStart === null){ devStatus.textContent = "Sayaç çalışmıyor: henüz bu dönemde çevirme yapılmadı."; return; }
-  cycleStart = Date.now() - refillMs() + 3000; store.set(KEY_CYCLE, cycleStart); tickTimer();
+  cycleStart = Date.now() - refillMs() + 3000; saveSpins(); tickTimer();
   devStatus.textContent = "Süre 3 saniye içinde dolacak, haklar yenilenecek.";
 });
 $("devClearStorageBtn").addEventListener("click", () => { store.clear(); resetRound(); initSpins(); devStatus.textContent = "Hafıza temizlendi."; });
