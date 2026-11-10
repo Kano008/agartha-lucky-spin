@@ -7,8 +7,10 @@ Bu depo yalnızca oyunu içerir.
 ## Denemek için
 
 ```
-prototip/index.html
+prototip/version.2.0.html
+https://kano008.github.io/agartha-lucky-spin/prototip/version2.0.html
 ```
+
 
 Tarayıcıda aç, hepsi bu. Derleme, kurulum, bağımlılık yok.
 (Sesler için sayfaya bir kez tıklamak gerekebilir.
@@ -18,4 +20,4 @@ Kolu aşağı sürükleyebilir, üstüne dokunabilir veya klavyeyle Enter'a basa
 Kazanma Yüzdeleri Aşağıdaki Gibidir:
 1/600 Free Bira
 1/300 Diğer ürünlerde %30 indirim.
-1/200 Free Spin
+1/10 Free Spin
